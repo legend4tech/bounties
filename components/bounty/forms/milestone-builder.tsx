@@ -3,6 +3,7 @@
 import * as React from "react";
 import {
   useFieldArray,
+  type ArrayPath,
   type Path,
   type UseFormReturn,
   type FieldValues,
@@ -15,24 +16,36 @@ import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { FormFieldWrapper } from "@/components/ui/form-field-wrapper";
 
-interface MilestoneBuilderProps<TFieldValues extends FieldValues> {
+type MilestoneDraft = {
+  title: string;
+  description?: string;
+  percentage: number;
+};
+
+interface MilestoneBuilderProps<
+  TFieldValues extends FieldValues,
+  TName extends ArrayPath<TFieldValues>,
+> {
   form: UseFormReturn<TFieldValues>;
-  name: Path<TFieldValues>;
+  name: TName;
   maxMilestones?: number;
 }
 
-export function MilestoneBuilder<TFieldValues extends FieldValues>({
+export function MilestoneBuilder<
+  TFieldValues extends FieldValues,
+  TName extends ArrayPath<TFieldValues>,
+>({
   form,
   name,
   maxMilestones = 10,
-}: MilestoneBuilderProps<TFieldValues>) {
-  const { fields, append, remove } = useFieldArray({
+}: MilestoneBuilderProps<TFieldValues, TName>) {
+  const { fields, append, remove } = useFieldArray<TFieldValues, TName>({
     control: form.control,
     name,
   });
 
-  const milestones = form.watch(name) as
-    | Array<{ title: string; description?: string; percentage: number }>
+  const milestones = form.watch(name as Path<TFieldValues>) as
+    | ReadonlyArray<MilestoneDraft>
     | undefined;
   const totalPercentage =
     milestones?.reduce((sum, m) => sum + (m.percentage || 0), 0) ?? 0;
@@ -44,7 +57,7 @@ export function MilestoneBuilder<TFieldValues extends FieldValues>({
       title: "",
       description: "",
       percentage: defaultPercentage,
-    });
+    } as never);
   };
 
   return (
@@ -109,7 +122,7 @@ export function MilestoneBuilder<TFieldValues extends FieldValues>({
             <div className="grid gap-3 sm:grid-cols-[1fr_100px]">
               <FormFieldWrapper
                 control={form.control}
-                name={`${name}.${index}.title`}
+                name={`${name}.${index}.title` as Path<TFieldValues>}
                 render={({ field }) => (
                   <Input
                     {...field}
@@ -122,7 +135,7 @@ export function MilestoneBuilder<TFieldValues extends FieldValues>({
 
               <FormFieldWrapper
                 control={form.control}
-                name={`${name}.${index}.percentage`}
+                name={`${name}.${index}.percentage` as Path<TFieldValues>}
                 render={({ field }) => (
                   <Input
                     {...field}
@@ -143,7 +156,7 @@ export function MilestoneBuilder<TFieldValues extends FieldValues>({
 
             <FormFieldWrapper
               control={form.control}
-              name={`${name}.${index}.description`}
+              name={`${name}.${index}.description` as Path<TFieldValues>}
               render={({ field }) => (
                 <Textarea
                   {...field}
