@@ -70,6 +70,7 @@ export function ApplicationDialog({
   };
 
   const handleSubmit = async (values: ApplicationFormValues) => {
+    form.clearErrors("root");
     setLoading(true);
 
     try {
@@ -84,7 +85,11 @@ export function ApplicationDialog({
         form.reset();
       }
     } catch (error) {
-      console.error("Failed to submit application", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      form.setError("root", {
+        message: `Failed to submit application: ${errorMessage}`,
+      });
     } finally {
       setLoading(false);
     }
@@ -133,6 +138,12 @@ export function ApplicationDialog({
             </div>
 
             <DialogFooter>
+              {form.formState.errors.root?.message ? (
+                <p className="text-destructive mr-auto text-sm">
+                  {form.formState.errors.root.message}
+                </p>
+              ) : null}
+
               <Button
                 type="button"
                 variant="ghost"
