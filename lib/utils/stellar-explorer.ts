@@ -3,103 +3,103 @@
  *
  * Provides URL generation for Stellar explorers to link transactions,
  * accounts, and contracts for transparency and verification.
+ *
+ * Uses @stellar/stellar-sdk StrKey for proper checksum validation.
  */
 
-export type StellarNetwork = "mainnet" | "testnet";
+import { StrKey } from "@stellar/stellar-sdk";
+
+export type StellarNetwork = "public" | "testnet";
 export type ExplorerType = "transaction" | "account" | "contract";
 
 export interface ExplorerConfig {
   name: string;
   baseUrl: string;
-  paths: {
-    transaction: string;
-    account: string;
-    contract: string;
-  };
+  /** Path template per network: keys are "public" and "testnet" */
+  networkPaths: Record<
+    StellarNetwork,
+    {
+      transaction: string;
+      account: string;
+      contract: string;
+    }
+  >;
 }
 
-// Supported Stellar explorers
+// Supported Stellar explorers with per-network path configuration
 const EXPLORERS: Record<string, ExplorerConfig> = {
   "stellar.expert": {
     name: "Stellar Expert",
     baseUrl: "https://stellar.expert",
-    paths: {
-      transaction: "/explorer/public/tx/",
-      account: "/explorer/public/account/",
-      contract: "/explorer/public/contract/",
+    networkPaths: {
+      public: {
+        transaction: "/explorer/public/tx/",
+        account: "/explorer/public/account/",
+        contract: "/explorer/public/contract/",
+      },
+      testnet: {
+        transaction: "/explorer/testnet/tx/",
+        account: "/explorer/testnet/account/",
+        contract: "/explorer/testnet/contract/",
+      },
     },
   },
   "stellarchain.io": {
     name: "Stellar Chain",
     baseUrl: "https://stellarchain.io",
-    paths: {
-      transaction: "/tx/",
-      account: "/account/",
-      contract: "/contract/",
+    networkPaths: {
+      public: {
+        transaction: "/tx/",
+        account: "/account/",
+        contract: "/contract/",
+      },
+      testnet: {
+        transaction: "/tx/",
+        account: "/account/",
+        contract: "/contract/",
+      },
     },
   },
 };
 
-// Default network settings
-const DEFAULT_NETWORK: StellarNetwork = "mainnet";
 const DEFAULT_EXPLORER = "stellar.expert";
 
 /**
  * Returns the configured Stellar network from environment variable.
- * @returns The network type (mainnet or testnet)
+ * Maps "mainnet" / "public" → "public", defaults to "testnet" otherwise.
  */
 export function getStellarNetwork(): StellarNetwork {
-  // Use environment variable for network configuration
-  const envNetwork = process.env.NEXT_PUBLIC_STELLAR_NETWORK as StellarNetwork;
-  return envNetwork === "testnet" ? "testnet" : DEFAULT_NETWORK;
+  const raw = process.env.NEXT_PUBLIC_STELLAR_NETWORK || "testnet";
+  return raw === "public" || raw === "mainnet" ? "public" : "testnet";
 }
 
 /**
- * Gets the appropriate base URL for the given network and explorer
- * @param explorer - The explorer name
- * @param network - The Stellar network
- * @returns The base URL for the explorer
+ * Gets the base URL for the given network and explorer.
+ * stellarchain.io uses a subdomain for testnet; stellar.expert uses paths.
  */
 function getExplorerBaseUrl(explorer: string, network: StellarNetwork): string {
   const config = EXPLORERS[explorer] || EXPLORERS[DEFAULT_EXPLORER];
 
-  // Handle different testnet URL patterns for different explorers
-  if (network === "testnet") {
-    if (explorer === "stellarchain.io") {
-      return "https://testnet.stellarchain.io";
-    }
+  if (network === "testnet" && explorer === "stellarchain.io") {
+    return "https://testnet.stellarchain.io";
   }
 
   return config.baseUrl;
 }
 
 /**
- * Gets the explorer paths adjusted for the network.
- * stellar.expert uses /explorer/testnet/ for testnet instead of /explorer/public/
+ * Gets the explorer paths for the given network.
  */
 function getExplorerPaths(
   explorer: string,
   network: StellarNetwork,
-): ExplorerConfig["paths"] {
+): ExplorerConfig["networkPaths"]["public"] {
   const config = EXPLORERS[explorer] || EXPLORERS[DEFAULT_EXPLORER];
-
-  if (network === "testnet" && explorer === "stellar.expert") {
-    return {
-      transaction: "/explorer/testnet/tx/",
-      account: "/explorer/testnet/account/",
-      contract: "/explorer/testnet/contract/",
-    };
-  }
-
-  return config.paths;
+  return config.networkPaths[network];
 }
 
 /**
- * Generates a Stellar explorer URL for a transaction
- * @param txHash - The transaction hash
- * @param network - The Stellar network (optional, will be detected if not provided)
- * @param explorer - The explorer to use (optional, defaults to stellar.expert)
- * @returns The full URL to the transaction page
+ * Generates a Stellar explorer URL for a transaction.
  */
 export function getTransactionUrl(
   txHash: string,
@@ -110,19 +110,15 @@ export function getTransactionUrl(
     throw new Error("Transaction hash is required");
   }
 
-  const detectedNetwork = network || getStellarNetwork();
-  const paths = getExplorerPaths(explorer, detectedNetwork);
-  const baseUrl = getExplorerBaseUrl(explorer, detectedNetwork);
+  const resolvedNetwork = network || getStellarNetwork();
+  const baseUrl = getExplorerBaseUrl(explorer, resolvedNetwork);
+  const paths = getExplorerPaths(explorer, resolvedNetwork);
 
   return `${baseUrl}${paths.transaction}${txHash}`;
 }
 
 /**
- * Generates a Stellar explorer URL for an account
- * @param address - The Stellar account address
- * @param network - The Stellar network (optional, will be detected if not provided)
- * @param explorer - The explorer to use (optional, defaults to stellar.expert)
- * @returns The full URL to the account page
+ * Generates a Stellar explorer URL for an account.
  */
 export function getAccountUrl(
   address: string,
@@ -133,19 +129,15 @@ export function getAccountUrl(
     throw new Error("Account address is required");
   }
 
-  const detectedNetwork = network || getStellarNetwork();
-  const paths = getExplorerPaths(explorer, detectedNetwork);
-  const baseUrl = getExplorerBaseUrl(explorer, detectedNetwork);
+  const resolvedNetwork = network || getStellarNetwork();
+  const baseUrl = getExplorerBaseUrl(explorer, resolvedNetwork);
+  const paths = getExplorerPaths(explorer, resolvedNetwork);
 
   return `${baseUrl}${paths.account}${address}`;
 }
 
 /**
- * Generates a Stellar explorer URL for a contract
- * @param contractId - The Stellar contract ID
- * @param network - The Stellar network (optional, will be detected if not provided)
- * @param explorer - The explorer to use (optional, defaults to stellar.expert)
- * @returns The full URL to the contract page
+ * Generates a Stellar explorer URL for a contract.
  */
 export function getContractUrl(
   contractId: string,
@@ -156,56 +148,50 @@ export function getContractUrl(
     throw new Error("Contract ID is required");
   }
 
-  const detectedNetwork = network || getStellarNetwork();
-  const paths = getExplorerPaths(explorer, detectedNetwork);
-  const baseUrl = getExplorerBaseUrl(explorer, detectedNetwork);
+  const resolvedNetwork = network || getStellarNetwork();
+  const baseUrl = getExplorerBaseUrl(explorer, resolvedNetwork);
+  const paths = getExplorerPaths(explorer, resolvedNetwork);
 
   return `${baseUrl}${paths.contract}${contractId}`;
 }
 
 /**
- * Gets a list of available explorers
- * @returns Array of available explorer names
+ * Gets a list of available explorers.
  */
 export function getAvailableExplorers(): string[] {
   return Object.keys(EXPLORERS);
 }
 
 /**
- * Gets the configuration for a specific explorer
- * @param explorer - The explorer name
- * @returns The explorer configuration
+ * Gets the configuration for a specific explorer.
  */
 export function getExplorerConfig(explorer: string): ExplorerConfig | null {
   return EXPLORERS[explorer] || null;
 }
 
 /**
- * Validates if a string is a valid Stellar address
- * @param address - The address to validate
- * @returns True if valid, false otherwise
+ * Validates if a string is a valid Stellar account address (G-address).
+ * Uses StrKey checksum validation from @stellar/stellar-sdk.
  */
 export function isValidStellarAddress(address: string): boolean {
-  // Basic validation - Stellar addresses start with 'G' and are 56 characters long
-  return /^G[A-Z2-7]{55}$/.test(address);
+  if (!address || typeof address !== "string") return false;
+  return StrKey.isValidEd25519PublicKey(address.trim());
 }
 
 /**
- * Validates if a string is a valid Stellar transaction hash
- * @param hash - The hash to validate
- * @returns True if valid, false otherwise
+ * Validates if a string is a valid Stellar transaction hash.
+ * Transaction hashes are 64-character lowercase hex strings.
  */
 export function isValidStellarTxHash(hash: string): boolean {
-  // Basic validation - Stellar transaction hashes are 64 character hex strings
-  return /^[a-f0-9]{64}$/i.test(hash);
+  if (!hash || typeof hash !== "string") return false;
+  return /^[a-f0-9]{64}$/i.test(hash.trim());
 }
 
 /**
- * Validates if a string is a valid Stellar contract ID
- * @param contractId - The contract ID to validate
- * @returns True if valid, false otherwise
+ * Validates if a string is a valid Stellar/Soroban contract ID (C-address).
+ * Uses StrKey checksum validation from @stellar/stellar-sdk.
  */
 export function isValidStellarContractId(contractId: string): boolean {
-  // Soroban contract IDs start with 'C' and are 56 characters long
-  return /^C[A-Z2-7]{55}$/.test(contractId);
+  if (!contractId || typeof contractId !== "string") return false;
+  return StrKey.isValidContract(contractId.trim());
 }
