@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
@@ -80,16 +81,21 @@ export function FcfsApprovalPanel({ bounty }: { bounty: FcfsApprovalBounty }) {
             {targetSubmission.submittedByUser?.name ||
               targetSubmission.submittedBy}
           </p>
-          {targetSubmission.githubPullRequestUrl && (
-            <a
+          {targetSubmission.githubPullRequestUrl &&
+          targetSubmission.githubPullRequestUrl.startsWith("https://") ? (
+            <Link
               href={targetSubmission.githubPullRequestUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="text-primary hover:underline break-all"
             >
               {targetSubmission.githubPullRequestUrl}
-            </a>
-          )}
+            </Link>
+          ) : targetSubmission.githubPullRequestUrl ? (
+            <span className="text-xs text-gray-400 break-all">
+              {targetSubmission.githubPullRequestUrl}
+            </span>
+          ) : null}
         </div>
       ) : (
         <p className="text-xs text-gray-400">

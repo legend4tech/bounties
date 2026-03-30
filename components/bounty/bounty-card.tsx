@@ -65,6 +65,11 @@ const statusConfig: Record<
     label: "Under Review",
     dotColor: "bg-amber-500",
   },
+  in_review: {
+    variant: "secondary",
+    label: "In Review",
+    dotColor: "bg-amber-500",
+  },
   disputed: {
     variant: "destructive",
     label: "Disputed",

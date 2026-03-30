@@ -89,7 +89,9 @@ export function BountyDetailClient({ bountyId }: { bountyId: string }) {
         <DescriptionCard description={bounty.description} />
         {!isCancelled && pool && <EscrowDetailPanel poolId={bountyId} />}
         <RefundStatusTracker bountyId={bountyId} isCancelled={isCancelled} />
-        <BountyDetailSubmissionsCard bounty={bounty} />
+        {bounty.type !== "FIXED_PRICE" && (
+          <BountyDetailSubmissionsCard bounty={bounty} />
+        )}
         {bounty.type === "FIXED_PRICE" && <FcfsApprovalPanel bounty={bounty} />}
       </div>
 
