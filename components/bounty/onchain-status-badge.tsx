@@ -84,66 +84,71 @@ export function OnChainStatusBadge({
   const config = consistencyConfig[consistencyState];
 
   return (
-    <TooltipProvider delayDuration={300}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className={cn("flex items-center gap-1.5", className)}>
-            <Badge
-              variant="outline"
-              className={cn(
-                "flex items-center gap-1 text-xs font-medium px-2 py-0.5 cursor-default select-none",
-                config.badgeClass,
-              )}
+    <div className={cn("flex items-center gap-1.5", className)}>
+      <TooltipProvider delayDuration={300}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              className="cursor-default rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
-              {config.icon}
-              <span>{config.label}</span>
-            </Badge>
-
-            {explorerUrl && (
-              <a
-                href={explorerUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-                aria-label="View on Stellar Explorer"
+              <Badge
+                variant="outline"
+                className={cn(
+                  "flex items-center gap-1 text-xs font-medium px-2 py-0.5 select-none pointer-events-none",
+                  config.badgeClass,
+                )}
               >
-                <ExternalLink className="size-3" />
-              </a>
+                {config.icon}
+                <span>{config.label}</span>
+              </Badge>
+            </button>
+          </TooltipTrigger>
+
+          <TooltipContent className="max-w-xs text-xs" side="bottom">
+            <p>{config.tooltipText}</p>
+
+            {consistencyState === "conflict" && showConflictDetails && (
+              <div className="mt-1.5 space-y-0.5 border-t border-border/50 pt-1.5">
+                {onChainData?.status && onChainData.status !== "unknown" && (
+                  <p>
+                    <span className="text-muted-foreground">On-chain: </span>
+                    <span className="font-medium text-foreground">
+                      {statusLabels[onChainData.status]}
+                    </span>
+                  </p>
+                )}
+                {graphqlBounty && (
+                  <p>
+                    <span className="text-muted-foreground">Database: </span>
+                    <span className="font-medium text-foreground">
+                      {graphqlBounty.status}
+                    </span>
+                  </p>
+                )}
+              </div>
             )}
-          </div>
-        </TooltipTrigger>
 
-        <TooltipContent className="max-w-xs text-xs" side="bottom">
-          <p>{config.tooltipText}</p>
+            {onChainData?.ledger && (
+              <p className="mt-1 text-muted-foreground">
+                Ledger #{onChainData.ledger}
+              </p>
+            )}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
 
-          {consistencyState === "conflict" && showConflictDetails && (
-            <div className="mt-1.5 space-y-0.5 border-t border-border/50 pt-1.5">
-              {onChainData?.status !== "unknown" && (
-                <p>
-                  <span className="text-muted-foreground">On-chain: </span>
-                  <span className="font-medium text-foreground">
-                    {statusLabels[onChainData!.status]}
-                  </span>
-                </p>
-              )}
-              {graphqlBounty && (
-                <p>
-                  <span className="text-muted-foreground">Database: </span>
-                  <span className="font-medium text-foreground">
-                    {graphqlBounty.status}
-                  </span>
-                </p>
-              )}
-            </div>
-          )}
-
-          {onChainData?.ledger && (
-            <p className="mt-1 text-muted-foreground">
-              Ledger #{onChainData.ledger}
-            </p>
-          )}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+      {explorerUrl && (
+        <a
+          href={explorerUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-muted-foreground hover:text-foreground transition-colors"
+          aria-label="View on Stellar Explorer"
+        >
+          <ExternalLink className="size-3" />
+        </a>
+      )}
+    </div>
   );
 }
