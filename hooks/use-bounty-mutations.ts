@@ -287,14 +287,14 @@ export function useCancelBounty() {
   return {
     ...mutation,
     cancel: (
-      { id, reason }: { id: string; reason?: string },
+      { id }: { id: string; reason?: string },
       options?: UpdateBountyMutateOptions,
     ) =>
       // 'reason' is intentionally ignored in the GraphQL mutation because
       // UpdateBountyInput does not support it. It is consumed by EscrowService.cancelBounty.
       mutation.mutate({ input: { id, status: "CANCELLED" } }, options),
     cancelAsync: (
-      { id, reason }: { id: string; reason?: string },
+      { id }: { id: string; reason?: string },
       options?: UpdateBountyMutateOptions,
     ) =>
       // 'reason' is intentionally ignored in the GraphQL mutation because
