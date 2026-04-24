@@ -98,7 +98,10 @@ export function ApplicationDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="sm:max-w-131.25 bg-background text-foreground border-border">
+      <DialogContent
+        data-testid="application-dialog"
+        className="sm:max-w-131.25 bg-background text-foreground border-border"
+      >
         <DialogHeader>
           <DialogTitle>Apply for Bounty</DialogTitle>
           <DialogDescription>
@@ -116,6 +119,7 @@ export function ApplicationDialog({
                 render={({ field }) => (
                   <Textarea
                     {...field}
+                    data-testid="cover-letter-input"
                     placeholder="Explain why you are a good fit..."
                     className="min-h-37.5"
                   />
@@ -130,6 +134,7 @@ export function ApplicationDialog({
                 render={({ field }) => (
                   <Input
                     {...field}
+                    data-testid="portfolio-url-input"
                     placeholder="https://..."
                     value={field.value ?? ""}
                   />
@@ -139,7 +144,7 @@ export function ApplicationDialog({
 
             <DialogFooter>
               {form.formState.errors.root?.message ? (
-                <p className="text-destructive mr-auto text-sm">
+                <p data-testid="application-error" className="text-destructive mr-auto text-sm">
                   {form.formState.errors.root.message}
                 </p>
               ) : null}
@@ -151,7 +156,7 @@ export function ApplicationDialog({
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={loading}>
+              <Button type="submit" data-testid="submit-application-btn" disabled={loading}>
                 {loading ? "Submitting..." : "Submit Application"}
               </Button>
             </DialogFooter>

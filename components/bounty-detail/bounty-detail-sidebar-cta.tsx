@@ -9,7 +9,6 @@ import {
   XCircle,
   Loader2,
   Users,
-  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -25,16 +24,15 @@ import {
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 
-import { BountyFieldsFragment } from "@/lib/graphql/generated";
+import { BountyFieldsFragment, useSubmitToBountyMutation } from "@/lib/graphql/generated";
 import { StatusBadge, TypeBadge } from "./bounty-badges";
 import { FcfsClaimButton } from "@/components/bounty/fcfs-claim-button";
-import { CompetitionSubmission } from "@/components/bounty/competition-submission";
-import { CompetitionStatus } from "@/components/bounty/competition-status";
+import { ApplicationDialog } from "@/components/bounty/application-dialog";
 import { authClient } from "@/lib/auth-client";
-import { useCompetitionJoinState } from "@/hooks/use-competition-join-state";
 import type { CancellationRecord } from "@/types/escrow";
 import { useCancelBountyDialog } from "@/hooks/use-cancel-bounty-dialog";
 import type { Bounty } from "@/types/bounty";
+import { toast } from "sonner";
 
 /** Props accept the wider intersection returned by useBountyDetail so
  * callers don't need a cast. Optional Bounty fields (maxSlots, etc.)
@@ -48,7 +46,9 @@ interface SidebarCTAProps {
 
 export function SidebarCTA({ bounty, onCancelled }: SidebarCTAProps) {
   const [copied, setCopied] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
   const { data: session } = authClient.useSession();
+  const submitMutation = useSubmitToBountyMutation();
 
   const {
     cancelDialogOpen,
@@ -61,21 +61,9 @@ export function SidebarCTA({ bounty, onCancelled }: SidebarCTAProps) {
 
   const canAct = bounty.status === "OPEN";
   const isFcfs = bounty.type === "FIXED_PRICE";
-  const isCompetition = bounty.type === "COMPETITION";
-  const isCreator =
-    (session?.user as { id?: string } | undefined)?.id === bounty.createdBy;
+  const isCreator = session?.user?.id === bounty.createdBy;
   const canCancel =
     isCreator && (bounty.status === "OPEN" || bounty.status === "IN_PROGRESS");
-
-  // claimCount: use backend claimCount when available, fall back to _count.submissions
-  const claimCount = bounty.claimCount ?? bounty._count?.submissions ?? 0;
-  const maxParticipants = bounty.maxParticipants ?? null;
-  const deadline = bounty.bountyWindow?.endDate ?? null;
-  const isFinalized = bounty.status === "COMPLETED";
-  const submissionCount = bounty._count?.submissions ?? 0;
-
-  const { hasJoined, isPastDeadline, joinMutation, handleJoin } =
-    useCompetitionJoinState(bounty);
 
   const handleCopy = async () => {
     try {
@@ -154,82 +142,85 @@ export function SidebarCTA({ bounty, onCancelled }: SidebarCTAProps) {
 
         <Separator className="bg-gray-800/60" />
 
-        {/* Competition slot count */}
-        {isCompetition && (
-          <div className="flex items-center justify-between text-sm text-gray-400">
-            <span className="flex items-center gap-1.5">
-              <Users className="size-3.5" />
-              Slots
-            </span>
-            <span className="font-medium text-gray-200">
-              {claimCount}
-              {maxParticipants != null ? `/${maxParticipants}` : ""} joined
-            </span>
-          </div>
-        )}
-
-        {isCompetition && <Separator className="bg-gray-800/60" />}
-
         {/* CTA */}
         {isFcfs ? (
           <FcfsClaimButton bounty={bounty} />
-        ) : isCompetition ? (
-          hasJoined ? (
-            <Button
-              className="w-full h-11 font-bold tracking-wide"
-              disabled
-              size="lg"
-            >
-              Joined ✓
-            </Button>
-          ) : (
-            <Button
-              className="w-full h-11 font-bold tracking-wide"
-              disabled={!canAct || isPastDeadline || joinMutation.isPending}
-              size="lg"
-              onClick={() => void handleJoin()}
-            >
-              {joinMutation.isPending ? (
-                <Loader2 className="mr-2 size-4 animate-spin" />
-              ) : (
-                <Users className="mr-2 size-4" />
-              )}
-              {canAct && !isPastDeadline ? "Join Competition" : ctaLabel()}
-            </Button>
-          )
+        ) : bounty.type === "MULTI_WINNER_MILESTONE" ? (
+          (() => {
+            const occupied = bounty.totalSlotsOccupied ?? 0;
+            const max = bounty.maxSlots ?? 5;
+            const isFull = occupied >= max;
+            return (
+              <Button
+                className="w-full h-11 font-bold tracking-wide"
+                disabled={!canAct || isFull || isApplying}
+                size="lg"
+                onClick={async () => {
+                  setIsApplying(true);
+                  console.log(
+                    "[Coming soon] Applying for slot for bounty:",
+                    bounty.id,
+                  );
+                  await new Promise((resolve) => setTimeout(resolve, 1500));
+                  setIsApplying(false);
+                }}
+              >
+                {isApplying ? (
+                  <Loader2 className="size-4 animate-spin mr-2" />
+                ) : isFull ? (
+                  "Slots Full"
+                ) : (
+                  "Apply for Slot [Coming soon]"
+                )}
+              </Button>
+            );
+          })()
+        ) : canAct ? (
+          <ApplicationDialog
+            bountyTitle={bounty.title}
+            onApply={async ({ coverLetter, portfolioUrl }) => {
+              try {
+                await submitMutation.mutateAsync({
+                  input: {
+                    bountyId: bounty.id,
+                    githubPullRequestUrl: portfolioUrl ?? bounty.githubIssueUrl,
+                    comments: coverLetter,
+                  },
+                });
+                toast.success("Application submitted successfully!");
+                return true;
+              } catch {
+                return false;
+              }
+            }}
+            trigger={
+              <Button
+                data-testid="apply-to-bounty-btn"
+                className="w-full h-11 font-bold tracking-wide"
+                size="lg"
+              >
+                {ctaLabel()}
+              </Button>
+            }
+          />
         ) : (
           <Button
             className="w-full h-11 font-bold tracking-wide"
-            disabled={!canAct}
+            disabled
             size="lg"
-            onClick={() =>
-              canAct &&
-              window.open(
-                bounty.githubIssueUrl,
-                "_blank",
-                "noopener,noreferrer",
-              )
-            }
           >
             {ctaLabel()}
           </Button>
         )}
 
-        {/* Helper text when locked out */}
-        {isCompetition && !hasJoined && isPastDeadline && (
-          <p className="flex items-center gap-1.5 text-xs text-gray-500 justify-center text-center">
-            <Clock className="size-3 shrink-0" />
-            Submission deadline has passed.
-          </p>
-        )}
-        {!canAct && !isCompetition && (
+        {!canAct && (
           <p className="flex items-center gap-1.5 text-xs text-gray-500 justify-center text-center">
             <AlertCircle className="size-3 shrink-0" />
             This bounty is no longer accepting new submissions.
           </p>
         )}
 
-        {/* Cancel Bounty */}
+        {/* Cancel Bounty - only for creator on open/in-progress */}
         {canCancel && (
           <>
             <Separator className="bg-gray-800/60" />
@@ -274,24 +265,6 @@ export function SidebarCTA({ bounty, onCancelled }: SidebarCTAProps) {
           )}
         </button>
       </div>
-
-      {/* Competition status + submission panel */}
-      {isCompetition && (
-        <>
-          <CompetitionStatus
-            claimCount={claimCount}
-            maxParticipants={maxParticipants}
-            submissionCount={submissionCount}
-            deadline={deadline}
-            isFinalized={isFinalized}
-          />
-          <CompetitionSubmission
-            bountyId={bounty.id}
-            deadline={deadline}
-            hasJoined={hasJoined}
-          />
-        </>
-      )}
 
       {/* Cancel Confirmation Dialog */}
       <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
@@ -366,6 +339,7 @@ interface MobileCTAProps {
 
 export function MobileCTA({ bounty, onCancelled }: MobileCTAProps) {
   const { data: session } = authClient.useSession();
+  const submitMutation = useSubmitToBountyMutation();
 
   const {
     cancelDialogOpen,
@@ -378,14 +352,9 @@ export function MobileCTA({ bounty, onCancelled }: MobileCTAProps) {
 
   const canAct = bounty.status === "OPEN";
   const isFcfs = bounty.type === "FIXED_PRICE";
-  const isCompetition = bounty.type === "COMPETITION";
-  const isCreator =
-    (session?.user as { id?: string } | undefined)?.id === bounty.createdBy;
+  const isCreator = session?.user?.id === bounty.createdBy;
   const canCancel =
     isCreator && (bounty.status === "OPEN" || bounty.status === "IN_PROGRESS");
-
-  const { hasJoined, isPastDeadline, joinMutation, handleJoin } =
-    useCompetitionJoinState(bounty);
 
   const label = () => {
     if (!canAct) {
@@ -405,43 +374,35 @@ export function MobileCTA({ bounty, onCancelled }: MobileCTAProps) {
     <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-background/90 backdrop-blur-xl border-t border-gray-800/60 z-20">
       {isFcfs ? (
         <FcfsClaimButton bounty={bounty} />
-      ) : isCompetition ? (
-        <Button
-          className="w-full h-11 font-bold tracking-wide"
-          disabled={
-            !canAct || hasJoined || isPastDeadline || joinMutation.isPending
-          }
-          size="lg"
-          onClick={() => void handleJoin()}
-        >
-          {joinMutation.isPending ? (
-            <Loader2 className="mr-2 size-4 animate-spin" />
-          ) : (
-            <Users className="mr-2 size-4" />
-          )}
-          {hasJoined
-            ? "Joined ✓"
-            : canAct && !isPastDeadline
-              ? "Join Competition"
-              : label()}
-        </Button>
-      ) : (
+      ) : canAct ? (
         <div className="flex gap-2">
-          <Button
-            className="flex-1 h-11 font-bold tracking-wide"
-            disabled={!canAct}
-            size="lg"
-            onClick={() =>
-              canAct &&
-              window.open(
-                bounty.githubIssueUrl,
-                "_blank",
-                "noopener,noreferrer",
-              )
+          <ApplicationDialog
+            bountyTitle={bounty.title}
+            onApply={async ({ coverLetter, portfolioUrl }) => {
+              try {
+                await submitMutation.mutateAsync({
+                  input: {
+                    bountyId: bounty.id,
+                    githubPullRequestUrl: portfolioUrl ?? bounty.githubIssueUrl,
+                    comments: coverLetter,
+                  },
+                });
+                toast.success("Application submitted successfully!");
+                return true;
+              } catch {
+                return false;
+              }
+            }}
+            trigger={
+              <Button
+                data-testid="apply-to-bounty-btn-mobile"
+                className="flex-1 h-11 font-bold tracking-wide"
+                size="lg"
+              >
+                {label()}
+              </Button>
             }
-          >
-            {label()}
-          </Button>
+          />
           {canCancel && (
             <Button
               variant="outline"
@@ -453,6 +414,14 @@ export function MobileCTA({ bounty, onCancelled }: MobileCTAProps) {
             </Button>
           )}
         </div>
+      ) : (
+        <Button
+          className="w-full h-11 font-bold tracking-wide"
+          disabled
+          size="lg"
+        >
+          {label()}
+        </Button>
       )}
 
       {/* Mobile Cancel Dialog */}
