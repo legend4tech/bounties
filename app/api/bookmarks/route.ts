@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/server-auth";
 import { graphqlRequest } from "@/lib/server-graphql";
+import { BookmarksDocument } from "@/lib/graphql/generated";
 import type { Bookmark } from "@/lib/graphql/generated";
 
 /**
@@ -15,58 +16,9 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Query GraphQL for bookmarks with full bounty details
-    const BOOKMARKS_QUERY = `
-      query GetBookmarks {
-        bookmarks {
-          id
-          userId
-          bountyId
-          createdAt
-          bounty {
-            id
-            title
-            description
-            status
-            type
-            rewardAmount
-            rewardCurrency
-            createdAt
-            updatedAt
-            organizationId
-            projectId
-            bountyWindowId
-            githubIssueUrl
-            githubIssueNumber
-            createdBy
-            organization {
-              id
-              name
-              logo
-              slug
-            }
-            project {
-              id
-              title
-              description
-            }
-            bountyWindow {
-              id
-              name
-              status
-              startDate
-              endDate
-            }
-            _count {
-              submissions
-            }
-          }
-        }
-      }
-    `;
-
+    // Use generated GraphQL document for type safety
     const data = await graphqlRequest<{ bookmarks: Bookmark[] }>(
-      BOOKMARKS_QUERY,
+      BookmarksDocument,
     );
 
     return NextResponse.json(data.bookmarks);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/server-auth";
 import { graphqlRequest } from "@/lib/server-graphql";
+import { ToggleBookmarkDocument } from "@/lib/graphql/generated";
 import type { Bookmark } from "@/lib/graphql/generated";
 
 /**
@@ -29,58 +30,9 @@ export async function POST(
       );
     }
 
-    // Call GraphQL mutation to toggle bookmark
-    const TOGGLE_BOOKMARK_MUTATION = `
-      mutation ToggleBookmark($input: ToggleBookmarkInput!) {
-        toggleBookmark(input: $input) {
-          id
-          userId
-          bountyId
-          createdAt
-          bounty {
-            id
-            title
-            description
-            status
-            type
-            rewardAmount
-            rewardCurrency
-            createdAt
-            updatedAt
-            organizationId
-            projectId
-            bountyWindowId
-            githubIssueUrl
-            githubIssueNumber
-            createdBy
-            organization {
-              id
-              name
-              logo
-              slug
-            }
-            project {
-              id
-              title
-              description
-            }
-            bountyWindow {
-              id
-              name
-              status
-              startDate
-              endDate
-            }
-            _count {
-              submissions
-            }
-          }
-        }
-      }
-    `;
-
+    // Use generated GraphQL mutation document
     const data = await graphqlRequest<{ toggleBookmark: Bookmark | null }>(
-      TOGGLE_BOOKMARK_MUTATION,
+      ToggleBookmarkDocument,
       { input: { bountyId } },
     );
 

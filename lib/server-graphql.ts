@@ -1,4 +1,5 @@
 import { getAccessToken } from "@/lib/auth-utils";
+import { TypedDocumentString } from "@/lib/graphql/generated";
 
 const GRAPHQL_URL = process.env.NEXT_PUBLIC_GRAPHQL_URL || "/api/graphql";
 
@@ -7,7 +8,7 @@ const GRAPHQL_URL = process.env.NEXT_PUBLIC_GRAPHQL_URL || "/api/graphql";
  * Use this in Server Components and Route Handlers
  */
 export async function graphqlRequest<T>(
-  query: string,
+  query: string | TypedDocumentString<unknown, Record<string, unknown>>,
   variables?: Record<string, unknown>,
 ): Promise<T> {
   const token = await getAccessToken();
@@ -17,6 +18,9 @@ export async function graphqlRequest<T>(
   if (token) {
     headers.authorization = `Bearer ${token}`;
   }
+
+  // Normalize: if TypedDocumentString, convert to string
+  const queryString = typeof query === "string" ? query : query.toString();
 
   const response = await fetch(GRAPHQL_URL, {
     method: "POST",

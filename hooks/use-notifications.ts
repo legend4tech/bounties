@@ -90,11 +90,19 @@ function saveToStorage(userId: string, items: NotificationItem[]): void {
 /**
  * Get a Map of bountyId -> status for currently bookmarked bounties.
  * Uses Set for O(1) membership filtering.
+ * Returns null if list cache is missing (no data available).
  */
-function getBookmarkedStatusMap(queryClient: QueryClient): Map<string, string> {
+function getBookmarkedStatusMap(
+  queryClient: QueryClient,
+): Map<string, string> | null {
   const ids = queryClient.getQueryData<string[]>(bookmarkKeys.ids()) ?? [];
   const idsSet = new Set(ids);
-  const list = queryClient.getQueryData<Bookmark[]>(bookmarkKeys.list()) ?? [];
+  const list = queryClient.getQueryData<Bookmark[]>(bookmarkKeys.list());
+
+  // If list cache is missing or empty, return null to signal "no data"
+  if (!list || list.length === 0) {
+    return null;
+  }
 
   const statusMap = new Map<string, string>();
   for (const b of list) {
@@ -174,6 +182,12 @@ export function useNotifications() {
         if (isBookmarked) {
           // Get previous status from status map (derived from list cache)
           const statusMap = getBookmarkedStatusMap(queryClient);
+
+          // If no cached data, skip notification (avoid false positives)
+          if (statusMap === null) {
+            return;
+          }
+
           const previousStatus = statusMap.get(bounty.id);
 
           // Only notify if status changed (meaningful update)
@@ -191,6 +205,15 @@ export function useNotifications() {
                 read: false,
               },
               [],
+            );
+
+            // Update status cache to prevent duplicate notifications
+            queryClient.setQueryData<Record<string, string>>(
+              bookmarkKeys.statusCache(),
+              (old = {}) => ({
+                ...old,
+                [bounty.id]: bounty.status,
+              }),
             );
           }
         }

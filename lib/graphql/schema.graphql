@@ -918,8 +918,8 @@ type Mutation {
   """Submit to a bounty (any authenticated user)"""
   submitToBounty(input: CreateSubmissionInput!): BountySubmissionType!
 
-  """Toggle a bookmark on a bounty (authenticated users)"""
-  toggleBookmark(input: ToggleBookmarkInput!): Bookmark!
+   """Toggle a bookmark on a bounty (authenticated users)"""
+   toggleBookmark(input: ToggleBookmarkInput!): Bookmark
 
   """Update a blog post (Admin only)"""
   updateAdminBlogPost(id: ID!, input: UpdateBlogPostDto!): AdminBlogPostDto!

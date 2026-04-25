@@ -104,7 +104,7 @@ export function useToggleBookmark() {
       toast.error(`Failed to bookmark: ${err.message}`);
     },
     onSettled: () => {
-      Promise.all([
+      return Promise.all([
         queryClient.invalidateQueries({ queryKey: bookmarkKeys.list() }),
         queryClient.invalidateQueries({ queryKey: bookmarkKeys.ids() }),
       ]);
