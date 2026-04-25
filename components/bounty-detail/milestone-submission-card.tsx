@@ -1,11 +1,18 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Milestone, ContributorProgress } from "@/types/bounty";
 import { cn } from "@/lib/utils";
-import { CheckCircle2, Circle, Send, ExternalLink, Clock } from "lucide-react";
+import {
+  CheckCircle2,
+  Circle,
+  Send,
+  ExternalLink,
+  Clock,
+  Loader2,
+} from "lucide-react";
 
 interface MilestoneSubmissionCardProps {
   milestones: Milestone[];
@@ -18,13 +25,27 @@ export function MilestoneSubmissionCard({
   contributorProgress,
   className,
 }: MilestoneSubmissionCardProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Guard: nothing to render if there are no milestones yet
+  if (milestones.length === 0) return null;
+
   // Find current milestone index; -1 means finished or stale id
   const currentIdx = milestones.findIndex(
     (m) => m.id === contributorProgress.currentMilestoneId,
   );
-  // When -1 treat contributor as past the last milestone
+  // When -1 treat contributor as past the last milestone (all done)
   const safeCurrentIndex = currentIdx === -1 ? milestones.length : currentIdx;
   const displayPosition = Math.min(safeCurrentIndex + 1, milestones.length);
+
+  async function handleSubmitWork(milestoneTitle: string) {
+    // TODO: replace with a real GraphQL mutation once the backend supports it.
+    setIsSubmitting(true);
+    console.log("[Coming soon] Submit work for milestone:", milestoneTitle);
+    // Simulate async work so the user gets visual feedback
+    await new Promise((r) => setTimeout(r, 800));
+    setIsSubmitting(false);
+  }
 
   return (
     <Card
@@ -110,11 +131,25 @@ export function MilestoneSubmissionCard({
                         size="sm"
                         variant="outline"
                         className="h-8 text-xs border-primary/30 hover:bg-primary/10"
+                        onClick={() =>
+                          milestone.id &&
+                          window.open(`#milestone-${milestone.id}`, "_self")
+                        }
                       >
                         <ExternalLink className="size-3 mr-1.5" /> View Task
                       </Button>
-                      <Button size="sm" className="h-8 text-xs font-bold">
-                        <Send className="size-3 mr-1.5" /> Submit Work
+                      <Button
+                        size="sm"
+                        className="h-8 text-xs font-bold"
+                        disabled={isSubmitting}
+                        onClick={() => handleSubmitWork(milestone.title)}
+                      >
+                        {isSubmitting ? (
+                          <Loader2 className="size-3 mr-1.5 animate-spin" />
+                        ) : (
+                          <Send className="size-3 mr-1.5" />
+                        )}
+                        {isSubmitting ? "Submitting…" : "Submit Work"}
                       </Button>
                     </div>
                   )}

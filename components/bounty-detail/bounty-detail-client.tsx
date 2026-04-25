@@ -16,7 +16,6 @@ import { RefundStatusTracker } from "../bounty/refund-status";
 import { FeeCalculator } from "../bounty/fee-calculator";
 import { useEscrowPool } from "@/hooks/use-escrow";
 import { authClient } from "@/lib/auth-client";
-import { Bounty } from "@/types/bounty";
 import type { CancellationRecord } from "@/types/escrow";
 import { MilestoneFunnel } from "@/components/bounty/milestone-funnel";
 import {
@@ -27,15 +26,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MilestoneSubmissionCard } from "./milestone-submission-card";
 import { Model4MaintainerDashboard } from "./model4-maintainer-dashboard";
 
-/** Typed adapter: centralises the unsafe cast and applies mock fallbacks. */
-function getMilestoneData(bounty: unknown): {
+/** Typed adapter: centralises the fallback logic for Model-4 fields.
+ * Until the GraphQL fragment is extended these fields come from mocks.
+ */
+function getMilestoneData(
+  bounty: ReturnType<
+    (typeof import("@/hooks/use-bounty-detail"))["useBountyDetail"]
+  >["data"],
+): {
   milestones: import("@/types/bounty").Milestone[];
   contributorProgress: import("@/types/bounty").ContributorProgress[];
 } {
-  const b = bounty as Bounty;
   return {
-    milestones: b.milestones ?? MOCK_MODEL4_MILESTONES,
-    contributorProgress: b.contributorProgress ?? MOCK_MODEL4_CONTRIBUTORS,
+    milestones: bounty?.milestones ?? MOCK_MODEL4_MILESTONES,
+    contributorProgress:
+      bounty?.contributorProgress ?? MOCK_MODEL4_CONTRIBUTORS,
   };
 }
 
@@ -112,24 +117,29 @@ export function BountyDetailClient({ bountyId }: { bountyId: string }) {
         <HeaderCard bounty={bounty} />
         <DescriptionCard description={bounty.description} />
 
-        {bounty.type === "MULTI_WINNER_MILESTONE" && (
-          <Card className="border-gray-800 bg-background-card/50 backdrop-blur-sm overflow-hidden">
-            <CardHeader className="border-b border-gray-800/50 pb-4">
-              <CardTitle className="text-lg font-bold flex items-center gap-2">
-                Milestone Funnel
-                <span className="text-xs font-normal text-muted-foreground bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                  Multi-Winner
-                </span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <MilestoneFunnel
-                milestones={getMilestoneData(bounty).milestones}
-                contributors={getMilestoneData(bounty).contributorProgress}
-              />
-            </CardContent>
-          </Card>
-        )}
+        {bounty.type === "MULTI_WINNER_MILESTONE" &&
+          (() => {
+            const { milestones, contributorProgress } =
+              getMilestoneData(bounty);
+            return (
+              <Card className="border-gray-800 bg-background-card/50 backdrop-blur-sm overflow-hidden">
+                <CardHeader className="border-b border-gray-800/50 pb-4">
+                  <CardTitle className="text-lg font-bold flex items-center gap-2">
+                    Milestone Funnel
+                    <span className="text-xs font-normal text-muted-foreground bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                      Multi-Winner
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <MilestoneFunnel
+                    milestones={milestones}
+                    contributors={contributorProgress}
+                  />
+                </CardContent>
+              </Card>
+            );
+          })()}
 
         {bounty.type === "MULTI_WINNER_MILESTONE" &&
           session?.user?.id &&
@@ -149,12 +159,17 @@ export function BountyDetailClient({ bountyId }: { bountyId: string }) {
           })()}
 
         {bounty.type === "MULTI_WINNER_MILESTONE" &&
-          session?.user?.id === bounty.createdBy && (
-            <Model4MaintainerDashboard
-              milestones={getMilestoneData(bounty).milestones}
-              contributors={getMilestoneData(bounty).contributorProgress}
-            />
-          )}
+          session?.user?.id === bounty.createdBy &&
+          (() => {
+            const { milestones, contributorProgress } =
+              getMilestoneData(bounty);
+            return (
+              <Model4MaintainerDashboard
+                milestones={milestones}
+                contributors={contributorProgress}
+              />
+            );
+          })()}
 
         {!isCancelled && pool && <EscrowDetailPanel poolId={bountyId} />}
         <RefundStatusTracker bountyId={bountyId} isCancelled={isCancelled} />
