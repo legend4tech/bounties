@@ -97,7 +97,7 @@ export function MilestoneSubmissionCard({
                     isCompleted
                       ? "bg-primary border-primary text-primary-foreground"
                       : isCurrent
-                        ? "bg-background border-primary text-primary shadow-[0_0_10px_rgba(167,249,80,0.3)]"
+                        ? "bg-background border-primary text-primary shadow-[0_0_8px_rgba(167,249,80,0.2)]"
                         : "bg-background border-gray-800 text-gray-600",
                   )}
                 >
@@ -149,7 +149,9 @@ export function MilestoneSubmissionCard({
                         ) : (
                           <Send className="size-3 mr-1.5" />
                         )}
-                        {isSubmitting ? "Submitting…" : "Submit Work"}
+                        {isSubmitting
+                          ? "Submitting…"
+                          : "Submit Work [Coming soon]"}
                       </Button>
                     </div>
                   )}

@@ -48,7 +48,7 @@ export function MilestoneFunnel({
                 className={cn(
                   "size-10 rounded-full flex items-center justify-center border-2 transition-all duration-300",
                   milestone.isCompleted
-                    ? "bg-primary border-primary text-primary-foreground shadow-[0_0_15px_rgba(var(--primary),0.5)]"
+                    ? "bg-primary border-primary text-primary-foreground shadow-[0_0_8px_rgba(167,249,80,0.2)]"
                     : "bg-background border-gray-700 text-gray-500 group-hover:border-primary/50",
                 )}
               >

@@ -120,7 +120,7 @@ export function Model4MaintainerDashboard({
                     </div>
                     <div className="h-1.5 w-full bg-gray-800 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-primary shadow-[0_0_8px_rgba(167,249,80,0.4)] transition-all duration-500"
+                        className="h-full bg-primary shadow-[0_0_5px_rgba(167,249,80,0.2)] transition-all duration-500"
                         style={{ width: `${progressPercentage}%` }}
                       />
                     </div>
@@ -143,7 +143,9 @@ export function Model4MaintainerDashboard({
                             <MessageSquare className="size-4" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Send Message</TooltipContent>
+                        <TooltipContent>
+                          Send Message [Coming soon]
+                        </TooltipContent>
                       </Tooltip>
 
                       <Tooltip>
@@ -160,7 +162,7 @@ export function Model4MaintainerDashboard({
                             }
                             disabled={loadingAction !== null}
                           >
-                            View Submissions
+                            View Submissions [Coming soon]
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>Review work</TooltipContent>
@@ -170,7 +172,7 @@ export function Model4MaintainerDashboard({
                         <TooltipTrigger asChild>
                           <Button
                             size="sm"
-                            className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 font-bold"
+                            className="h-8 text-xs bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 font-bold"
                             onClick={() =>
                               handleAction(
                                 "Release Payment",
@@ -185,7 +187,7 @@ export function Model4MaintainerDashboard({
                             ) : (
                               <Coins className="size-3 mr-1.5" />
                             )}
-                            Release Payment
+                            Release Payment [Coming soon]
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>Pay for milestone</TooltipContent>
@@ -207,7 +209,8 @@ export function Model4MaintainerDashboard({
                               <Loader2 className="size-3 mr-1.5 animate-spin" />
                             ) : (
                               <>
-                                Advance <ArrowRight className="size-3 ml-1.5" />
+                                Advance [Coming soon]{" "}
+                                <ArrowRight className="size-3 ml-1.5" />
                               </>
                             )}
                           </Button>
@@ -257,7 +260,8 @@ export function Model4MaintainerDashboard({
                     className="text-[10px] h-auto p-0 text-primary"
                     disabled
                   >
-                    View All Applications <ChevronRight className="size-3" />
+                    View All Applications [Coming soon]{" "}
+                    <ChevronRight className="size-3" />
                   </Button>
                 </span>
               </TooltipTrigger>

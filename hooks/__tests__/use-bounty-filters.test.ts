@@ -7,7 +7,6 @@ import { type Bounty } from "@/types/bounty";
 // ---------------------------------------------------------------------------
 const mockBounties: Bounty[] = [
   {
-    __typename: "Bounty",
     id: "1",
     title: "Fix login bug",
     description: "There is a critical bug in the authentication flow",
@@ -24,7 +23,6 @@ const mockBounties: Bounty[] = [
     githubIssueNumber: 1,
     createdBy: "user-1",
     organization: {
-      __typename: "BountyOrganization",
       id: "org-1",
       name: "Acme",
       logo: null,
@@ -32,10 +30,9 @@ const mockBounties: Bounty[] = [
     },
     project: null,
     bountyWindow: null,
-    _count: { __typename: "BountyCount", submissions: 0 },
+    _count: { submissions: 0 },
   },
   {
-    __typename: "Bounty",
     id: "2",
     title: "Build analytics dashboard",
     description: "Build a new real-time analytics dashboard",
@@ -52,7 +49,6 @@ const mockBounties: Bounty[] = [
     githubIssueNumber: 2,
     createdBy: "user-2",
     organization: {
-      __typename: "BountyOrganization",
       id: "org-2",
       name: "Beta Corp",
       logo: null,
@@ -60,10 +56,9 @@ const mockBounties: Bounty[] = [
     },
     project: null,
     bountyWindow: null,
-    _count: { __typename: "BountyCount", submissions: 1 },
+    _count: { submissions: 1 },
   },
   {
-    __typename: "Bounty",
     id: "3",
     title: "Smart contract security audit",
     description: "Perform a full security audit of the smart contracts",
@@ -80,7 +75,6 @@ const mockBounties: Bounty[] = [
     githubIssueNumber: 3,
     createdBy: "user-1",
     organization: {
-      __typename: "BountyOrganization",
       id: "org-1",
       name: "Acme",
       logo: null,
@@ -88,10 +82,9 @@ const mockBounties: Bounty[] = [
     },
     project: null,
     bountyWindow: null,
-    _count: { __typename: "BountyCount", submissions: 5 },
+    _count: { submissions: 5 },
   },
   {
-    __typename: "Bounty",
     id: "4",
     title: "Multi-milestone contributor sprint",
     description:
@@ -109,7 +102,6 @@ const mockBounties: Bounty[] = [
     githubIssueNumber: 4,
     createdBy: "user-2",
     organization: {
-      __typename: "BountyOrganization",
       id: "org-2",
       name: "Beta Corp",
       logo: null,
@@ -117,7 +109,7 @@ const mockBounties: Bounty[] = [
     },
     project: null,
     bountyWindow: null,
-    _count: { __typename: "BountyCount", submissions: 2 },
+    _count: { submissions: 2 },
   },
 ];
 
