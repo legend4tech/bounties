@@ -8,6 +8,7 @@ import {
   AlertCircle,
   XCircle,
   Loader2,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -29,14 +30,21 @@ import { FcfsClaimButton } from "@/components/bounty/fcfs-claim-button";
 import { authClient } from "@/lib/auth-client";
 import type { CancellationRecord } from "@/types/escrow";
 import { useCancelBountyDialog } from "@/hooks/use-cancel-bounty-dialog";
+import type { Bounty } from "@/types/bounty";
+
+/** Props accept the wider intersection returned by useBountyDetail so
+ * callers don't need a cast. Optional Bounty fields (maxSlots, etc.)
+ * are accessible without unsafe assertions. */
+type SidebarBounty = BountyFieldsFragment & Partial<Bounty>;
 
 interface SidebarCTAProps {
-  bounty: BountyFieldsFragment;
+  bounty: SidebarBounty;
   onCancelled?: (record: CancellationRecord) => void;
 }
 
 export function SidebarCTA({ bounty, onCancelled }: SidebarCTAProps) {
   const [copied, setCopied] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
   const { data: session } = authClient.useSession();
 
   const {
@@ -112,6 +120,21 @@ export function SidebarCTA({ bounty, onCancelled }: SidebarCTAProps) {
             <span>Type</span>
             <TypeBadge type={bounty.type} />
           </div>
+          {bounty.type === "MULTI_WINNER_MILESTONE" &&
+            (() => {
+              const occupied = bounty.totalSlotsOccupied ?? 0;
+              const max = bounty.maxSlots ?? 5;
+              return (
+                <div className="flex items-center justify-between text-gray-400">
+                  <span className="flex items-center gap-1.5">
+                    <Users className="size-3.5" /> Slots
+                  </span>
+                  <span className="font-medium text-gray-200">
+                    {occupied} / {max}
+                  </span>
+                </div>
+              );
+            })()}
         </div>
 
         <Separator className="bg-gray-800/60" />
@@ -119,6 +142,36 @@ export function SidebarCTA({ bounty, onCancelled }: SidebarCTAProps) {
         {/* CTA */}
         {isFcfs ? (
           <FcfsClaimButton bounty={bounty} />
+        ) : bounty.type === "MULTI_WINNER_MILESTONE" ? (
+          (() => {
+            const occupied = bounty.totalSlotsOccupied ?? 0;
+            const max = bounty.maxSlots ?? 5;
+            const isFull = occupied >= max;
+            return (
+              <Button
+                className="w-full h-11 font-bold tracking-wide"
+                disabled={!canAct || isFull || isApplying}
+                size="lg"
+                onClick={async () => {
+                  setIsApplying(true);
+                  console.log(
+                    "[Coming soon] Applying for slot for bounty:",
+                    bounty.id,
+                  );
+                  await new Promise((resolve) => setTimeout(resolve, 1500));
+                  setIsApplying(false);
+                }}
+              >
+                {isApplying ? (
+                  <Loader2 className="size-4 animate-spin mr-2" />
+                ) : isFull ? (
+                  "Slots Full"
+                ) : (
+                  "Apply for Slot [Coming soon]"
+                )}
+              </Button>
+            );
+          })()
         ) : (
           <Button
             className="w-full h-11 font-bold tracking-wide"
@@ -257,7 +310,7 @@ export function SidebarCTA({ bounty, onCancelled }: SidebarCTAProps) {
 }
 
 interface MobileCTAProps {
-  bounty: BountyFieldsFragment;
+  bounty: SidebarBounty;
   onCancelled?: (record: CancellationRecord) => void;
 }
 
