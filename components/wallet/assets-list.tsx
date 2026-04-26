@@ -45,7 +45,7 @@ export function AssetsList({ assets, walletAddress }: AssetsListProps) {
     }));
   };
 
-  const handleAddTrustline = async (assetId: string) => {
+  const handleRefreshAsset = async (assetId: string) => {
     if (!walletAddress) {
       toast.error("Wallet not connected");
       return;
@@ -283,7 +283,7 @@ export function AssetsList({ assets, walletAddress }: AssetsListProps) {
                         variant="outline"
                         className="h-7 text-xs"
                         disabled={isAdding || !walletAddress}
-                        onClick={() => handleAddTrustline(supported.id)}
+                        onClick={() => handleRefreshAsset(supported.id)}
                       >
                         {isAdding ? (
                           <Loader2 className="h-3 w-3 animate-spin mr-1" />
