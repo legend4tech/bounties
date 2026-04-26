@@ -69,7 +69,7 @@ export async function fetchAssetBalance(
     return 0;
   } catch (err) {
     console.error("[stellar] fetchAssetBalance failed:", err);
-    return 0;
+    throw err;
   }
 }
 
