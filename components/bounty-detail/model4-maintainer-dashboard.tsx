@@ -21,7 +21,6 @@ import {
   ArrowRight,
   Trophy,
 } from "lucide-react";
-import { toast } from "sonner";
 
 interface Model4MaintainerDashboardProps {
   milestones: Milestone[];
@@ -40,8 +39,8 @@ export function Model4MaintainerDashboard({
 
   const handleAction = async (action: string, userName: string) => {
     setLoadingAction(`${action}-${userName}`);
+    console.log(`[Coming soon] ${action} for ${userName}`);
     await new Promise((r) => setTimeout(r, 1000));
-    toast.success(`${action} successful for ${userName}`);
     setLoadingAction(null);
   };
 

@@ -10,7 +10,6 @@ import {
   Loader2,
   Users,
 } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
@@ -154,10 +153,7 @@ export function SidebarCTA({ bounty, onCancelled }: SidebarCTAProps) {
                 onApply={async (data) => {
                   // Mock application delay
                   await new Promise((resolve) => setTimeout(resolve, 1500));
-                  console.log("[Mock] Applying for slot:", data);
-                  toast.success(
-                    "Application submitted! The maintainer will review it soon.",
-                  );
+                  console.log("[Coming soon] Applying for slot:", data);
                   return true;
                 }}
                 trigger={
@@ -166,7 +162,7 @@ export function SidebarCTA({ bounty, onCancelled }: SidebarCTAProps) {
                     disabled={!canAct || isFull}
                     size="lg"
                   >
-                    {isFull ? "Slots Full" : "Apply for Slot"}
+                    {isFull ? "Slots Full" : "Apply for Slot [Coming soon]"}
                   </Button>
                 }
               />
