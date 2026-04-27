@@ -17,7 +17,9 @@
 
 import { test, expect, type Page } from "@playwright/test";
 
-const BOUNTY_ID = "e2e-comp-bounty-01";
+// Must be a valid UUID (all hex chars) so toBountyIdBigInt() in
+// use-competition-bounty.ts can parse it without throwing ContestError("tx_failed").
+const BOUNTY_ID = "e2ec0bcd-dead-beef-cafe-ab01cd02ef03";
 
 const MOCK_BOUNTY_FRAGMENT = {
   __typename: "Bounty",
@@ -36,8 +38,19 @@ const MOCK_BOUNTY_FRAGMENT = {
   githubIssueUrl: "https://github.com/stellar-privacy/zkp/issues/3",
   githubIssueNumber: 3,
   createdBy: "user-other",
-  organization: { __typename: "BountyOrganization", id: "org-privacy-lab", name: "Stellar Privacy Lab", logo: null, slug: "stellar-privacy-lab" },
-  project: { __typename: "BountyProject", id: "proj-zkp", title: "ZKP", description: null },
+  organization: {
+    __typename: "BountyOrganization",
+    id: "org-privacy-lab",
+    name: "Stellar Privacy Lab",
+    logo: null,
+    slug: "stellar-privacy-lab",
+  },
+  project: {
+    __typename: "BountyProject",
+    id: "proj-zkp",
+    title: "ZKP",
+    description: null,
+  },
   bountyWindow: null,
   _count: { __typename: "BountyCount", submissions: 0 },
   submissions: [],
@@ -56,7 +69,10 @@ const MOCK_SESSION = {
 };
 
 type ContestContracts = {
-  claimBounty: (args: { contributor: string; bountyId: bigint }) => Promise<{ txHash: string }>;
+  claimBounty: (args: {
+    contributor: string;
+    bountyId: bigint;
+  }) => Promise<{ txHash: string }>;
 };
 
 async function setupMocks(page: Page) {
@@ -76,37 +92,95 @@ async function setupMocks(page: Page) {
   await page.route("**/api/auth/**", async (route) => {
     const url = new URL(route.request().url());
     if (url.pathname.endsWith("/session")) {
-      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(MOCK_SESSION) });
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(MOCK_SESSION),
+      });
     } else {
-      await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: "{}",
+      });
     }
   });
 
   await page.route("**/api/graphql", async (route) => {
     let body: { operationName?: string } = {};
-    try { body = JSON.parse(route.request().postData() ?? "{}") as { operationName?: string }; } catch { /* ignore */ }
+    try {
+      body = JSON.parse(route.request().postData() ?? "{}") as {
+        operationName?: string;
+      };
+    } catch {
+      /* ignore */
+    }
 
     switch (body.operationName) {
       case "Bounties":
-        await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { bounties: { bounties: [MOCK_BOUNTY_FRAGMENT], total: 1, limit: 20, offset: 0 } } }) });
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            data: {
+              bounties: {
+                bounties: [MOCK_BOUNTY_FRAGMENT],
+                total: 1,
+                limit: 20,
+                offset: 0,
+              },
+            },
+          }),
+        });
         return;
       case "Bounty":
-        await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { bounty: { ...MOCK_BOUNTY_FRAGMENT, submissions: [] } } }) });
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            data: { bounty: { ...MOCK_BOUNTY_FRAGMENT, submissions: [] } },
+          }),
+        });
         return;
       case "TopContributors":
-        await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { topContributors: [] } }) });
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ data: { topContributors: [] } }),
+        });
         return;
       case "Leaderboard":
       case "GetLeaderboardUser":
       case "LeaderboardUser":
-        await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { leaderboard: { contributors: [], total: 0, limit: 10, offset: 0 }, userLeaderboard: null } }) });
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            data: {
+              leaderboard: { contributors: [], total: 0, limit: 10, offset: 0 },
+              userLeaderboard: null,
+            },
+          }),
+        });
         return;
       default:
         await route.abort("failed");
     }
   });
 
-  await page.context().addCookies([{ name: "boundless_auth.session_token", value: "fake-e2e-token", domain: "localhost", path: "/", httpOnly: false, secure: false, sameSite: "Lax" }]);
+  await page
+    .context()
+    .addCookies([
+      {
+        name: "boundless_auth.session_token",
+        value: "fake-e2e-token",
+        domain: "localhost",
+        path: "/",
+        httpOnly: false,
+        secure: false,
+        sameSite: "Lax",
+      },
+    ]);
 }
 
 test.describe("Bounty application flow", () => {
@@ -116,7 +190,9 @@ test.describe("Bounty application flow", () => {
 
   // ── 1. Navigation ──────────────────────────────────────────────────────
 
-  test("shows bounty list with cards after navigating to /bounty", async ({ page }) => {
+  test("shows bounty list with cards after navigating to /bounty", async ({
+    page,
+  }) => {
     await page.goto("/bounty");
     await expect(page.getByRole("heading", { name: /Explore/i })).toBeVisible();
     await expect(page.getByTestId("bounty-card").first()).toBeVisible();
@@ -131,18 +207,27 @@ test.describe("Bounty application flow", () => {
 
   // ── 2. Detail page CTA ────────────────────────────────────────────────
 
-  test("renders enabled Join Competition button for OPEN COMPETITION bounty", async ({ page }) => {
+  test("renders enabled Join Competition button for OPEN COMPETITION bounty", async ({
+    page,
+  }) => {
     await page.goto(`/bounty/${BOUNTY_ID}`);
-    const btn = page.locator('[data-testid="apply-to-bounty-btn"]:visible').first();
+    const btn = page
+      .locator('[data-testid="apply-to-bounty-btn"]:visible')
+      .first();
     await expect(btn).toBeVisible();
     await expect(btn).toBeEnabled();
   });
 
   // ── 3. Successful join ────────────────────────────────────────────────
 
-  test("clicking Join Competition transitions button to Joined state", async ({ page }) => {
+  test("clicking Join Competition transitions button to Joined state", async ({
+    page,
+  }) => {
     await page.goto(`/bounty/${BOUNTY_ID}`);
-    await page.locator('[data-testid="apply-to-bounty-btn"]:visible').first().click();
+    await page
+      .locator('[data-testid="apply-to-bounty-btn"]:visible')
+      .first()
+      .click();
     // Assert the join contract path is actually invoked.
     await expect
       .poll(
@@ -159,38 +244,71 @@ test.describe("Bounty application flow", () => {
 
   // ── 4. Failed join ────────────────────────────────────────────────────
 
-  test("shows error toast and keeps Join button when contract call fails", async ({ page }) => {
+  test("shows error toast and keeps Join button when contract call fails", async ({
+    page,
+  }) => {
     // Override the success client injected by setupMocks. Playwright runs
     // page.addInitScript scripts in registration order on each navigation,
     // so this test-level script is registered after setupMocks and overwrites
     // globalThis.__contestContracts with a failing claimBounty implementation.
     await page.addInitScript(() => {
       (globalThis as { __contestContracts?: unknown }).__contestContracts = {
-        claimBounty: async () => { throw new Error("Contract: insufficient funds"); },
+        claimBounty: async () => {
+          throw new Error("Contract: insufficient funds");
+        },
       };
     });
 
     await page.goto(`/bounty/${BOUNTY_ID}`);
-    await page.locator('[data-testid="apply-to-bounty-btn"]:visible').first().click();
+    await page
+      .locator('[data-testid="apply-to-bounty-btn"]:visible')
+      .first()
+      .click();
     // On failure the button must NOT transition to "Joined"
-    await expect(page.locator('[data-testid="apply-to-bounty-btn"]:visible').first()).toBeVisible({ timeout: 8_000 });
-    await expect(page.getByRole("button", { name: /Joined/i })).not.toBeVisible();
+    await expect(
+      page.locator('[data-testid="apply-to-bounty-btn"]:visible').first(),
+    ).toBeVisible({ timeout: 8_000 });
+    await expect(
+      page.getByRole("button", { name: /Joined/i }),
+    ).not.toBeVisible();
   });
 
   // ── 5. Disabled state when bounty is not OPEN ─────────────────────────
 
-  test("CTA button is disabled when bounty status is COMPLETED", async ({ page }) => {
+  test("CTA button is disabled when bounty status is COMPLETED", async ({
+    page,
+  }) => {
     await page.route("**/api/graphql", async (route) => {
       let body: { operationName?: string } = {};
-      try { body = JSON.parse(route.request().postData() ?? "{}") as { operationName?: string }; } catch { /* ignore */ }
+      try {
+        body = JSON.parse(route.request().postData() ?? "{}") as {
+          operationName?: string;
+        };
+      } catch {
+        /* ignore */
+      }
       if (body.operationName === "Bounty") {
-        await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { bounty: { ...MOCK_BOUNTY_FRAGMENT, status: "COMPLETED", submissions: [] } } }) });
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            data: {
+              bounty: {
+                ...MOCK_BOUNTY_FRAGMENT,
+                status: "COMPLETED",
+                submissions: [],
+              },
+            },
+          }),
+        });
         return;
       }
       await route.fallback();
     });
 
     await page.goto(`/bounty/${BOUNTY_ID}`);
-    await expect(page.getByRole("button", { name: /Completed/i })).toBeDisabled({ timeout: 8_000 });
+    await expect(page.getByRole("button", { name: /Completed/i })).toBeDisabled(
+      { timeout: 8_000 },
+    );
   });
 });
