@@ -48,7 +48,6 @@ interface SidebarCTAProps {
 
 export function SidebarCTA({ bounty, onCancelled }: SidebarCTAProps) {
   const [copied, setCopied] = useState(false);
-  const [isApplying, setIsApplying] = useState(false);
   const { data: session } = authClient.useSession();
 
   const {
