@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Github,
   Copy,
@@ -9,6 +9,7 @@ import {
   XCircle,
   Loader2,
   Users,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -23,7 +24,6 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
-import { toast } from "sonner";
 
 import { BountyFieldsFragment } from "@/lib/graphql/generated";
 import { StatusBadge, TypeBadge } from "./bounty-badges";
@@ -31,10 +31,7 @@ import { FcfsClaimButton } from "@/components/bounty/fcfs-claim-button";
 import { CompetitionSubmission } from "@/components/bounty/competition-submission";
 import { CompetitionStatus } from "@/components/bounty/competition-status";
 import { authClient } from "@/lib/auth-client";
-import {
-  useJoinCompetition,
-  ContestError,
-} from "@/hooks/use-competition-bounty";
+import { useCompetitionJoinState } from "@/hooks/use-competition-join-state";
 import type { CancellationRecord } from "@/types/escrow";
 import { useCancelBountyDialog } from "@/hooks/use-cancel-bounty-dialog";
 import type { Bounty } from "@/types/bounty";
@@ -53,7 +50,6 @@ export function SidebarCTA({ bounty, onCancelled }: SidebarCTAProps) {
   const [copied, setCopied] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const { data: session } = authClient.useSession();
-  const joinMutation = useJoinCompetition();
 
   const {
     cancelDialogOpen,
@@ -64,13 +60,6 @@ export function SidebarCTA({ bounty, onCancelled }: SidebarCTAProps) {
     handleCancel,
   } = useCancelBountyDialog(bounty.id, onCancelled);
 
-  const walletAddress =
-    (session?.user as { walletAddress?: string; address?: string } | undefined)
-      ?.walletAddress ||
-    (session?.user as { walletAddress?: string; address?: string } | undefined)
-      ?.address ||
-    null;
-
   const canAct = bounty.status === "OPEN";
   const isFcfs = bounty.type === "FIXED_PRICE";
   const isCompetition = bounty.type === "COMPETITION";
@@ -79,59 +68,15 @@ export function SidebarCTA({ bounty, onCancelled }: SidebarCTAProps) {
   const canCancel =
     isCreator && (bounty.status === "OPEN" || bounty.status === "IN_PROGRESS");
 
-  // Competition-specific derived values
-  // NOTE: _count.submissions is the only count the backend exposes today.
-  // It reflects submitted entries, not raw join count. A dedicated
-  // claimCount field is tracked in the backend schema backlog.
-  const submissionCount = bounty._count?.submissions ?? 0;
-  const maxParticipants =
-    (bounty as { maxParticipants?: number | null }).maxParticipants ?? null;
+  // claimCount: use backend claimCount when available, fall back to _count.submissions
+  const claimCount = bounty.claimCount ?? bounty._count?.submissions ?? 0;
+  const maxParticipants = bounty.maxParticipants ?? null;
   const deadline = bounty.bountyWindow?.endDate ?? null;
   const isFinalized = bounty.status === "COMPLETED";
-  const [isPastDeadline, setIsPastDeadline] = useState(false);
-  useEffect(() => {
-    if (!deadline) return;
-    const check = () =>
-      setIsPastDeadline(Date.now() > new Date(deadline).getTime());
-    check();
-    const id = setInterval(check, 10_000);
-    return () => clearInterval(id);
-  }, [deadline]);
+  const submissionCount = bounty._count?.submissions ?? 0;
 
-  // Derive hasJoined from the bounty payload (submissions list from BountyQuery).
-  // The BountyFieldsFragment used for lists doesn't include submissions, so we
-  // fall back to false. The single-bounty query (BountyQuery) does include them.
-  const bountySubmissions = (
-    bounty as { submissions?: Array<{ submittedBy: string }> | null }
-  ).submissions;
-  const serverHasJoined =
-    walletAddress != null &&
-    (bountySubmissions?.some((s) => s.submittedBy === walletAddress) ?? false);
-
-  // Local optimism: set to true after a successful join call, cleared on reload
-  const [localJoined, setLocalJoined] = useState(false);
-  const hasJoined = serverHasJoined || localJoined;
-
-  const handleJoinCompetition = async () => {
-    if (!walletAddress) {
-      toast.error("Connect your wallet to join this competition.");
-      return;
-    }
-    try {
-      await joinMutation.mutateAsync({
-        bountyId: bounty.id,
-        contributorAddress: walletAddress,
-      });
-      setLocalJoined(true);
-      toast.success("You've joined the competition!");
-    } catch (err) {
-      if (err instanceof ContestError && err.code === "already_joined") {
-        setLocalJoined(true);
-        return;
-      }
-      toast.error(err instanceof Error ? err.message : "Failed to join.");
-    }
-  };
+  const { hasJoined, isPastDeadline, joinMutation, handleJoin } =
+    useCompetitionJoinState(bounty);
 
   const handleCopy = async () => {
     try {
@@ -218,7 +163,7 @@ export function SidebarCTA({ bounty, onCancelled }: SidebarCTAProps) {
               Slots
             </span>
             <span className="font-medium text-gray-200">
-              {submissionCount}
+              {claimCount}
               {maxParticipants != null ? `/${maxParticipants}` : ""} joined
             </span>
           </div>
@@ -243,7 +188,7 @@ export function SidebarCTA({ bounty, onCancelled }: SidebarCTAProps) {
               className="w-full h-11 font-bold tracking-wide"
               disabled={!canAct || isPastDeadline || joinMutation.isPending}
               size="lg"
-              onClick={() => void handleJoinCompetition()}
+              onClick={() => void handleJoin()}
             >
               {joinMutation.isPending ? (
                 <Loader2 className="mr-2 size-4 animate-spin" />
@@ -271,6 +216,13 @@ export function SidebarCTA({ bounty, onCancelled }: SidebarCTAProps) {
           </Button>
         )}
 
+        {/* Helper text when locked out */}
+        {isCompetition && !hasJoined && isPastDeadline && (
+          <p className="flex items-center gap-1.5 text-xs text-gray-500 justify-center text-center">
+            <Clock className="size-3 shrink-0" />
+            Submission deadline has passed.
+          </p>
+        )}
         {!canAct && !isCompetition && (
           <p className="flex items-center gap-1.5 text-xs text-gray-500 justify-center text-center">
             <AlertCircle className="size-3 shrink-0" />
@@ -278,7 +230,7 @@ export function SidebarCTA({ bounty, onCancelled }: SidebarCTAProps) {
           </p>
         )}
 
-        {/* Cancel Bounty - only for creator on open/in-progress */}
+        {/* Cancel Bounty */}
         {canCancel && (
           <>
             <Separator className="bg-gray-800/60" />
@@ -328,7 +280,7 @@ export function SidebarCTA({ bounty, onCancelled }: SidebarCTAProps) {
       {isCompetition && (
         <>
           <CompetitionStatus
-            participantCount={submissionCount}
+            claimCount={claimCount}
             maxParticipants={maxParticipants}
             submissionCount={submissionCount}
             deadline={deadline}
@@ -415,7 +367,6 @@ interface MobileCTAProps {
 
 export function MobileCTA({ bounty, onCancelled }: MobileCTAProps) {
   const { data: session } = authClient.useSession();
-  const joinMutation = useJoinCompetition();
 
   const {
     cancelDialogOpen,
@@ -434,53 +385,8 @@ export function MobileCTA({ bounty, onCancelled }: MobileCTAProps) {
   const canCancel =
     isCreator && (bounty.status === "OPEN" || bounty.status === "IN_PROGRESS");
 
-  const walletAddress =
-    (session?.user as { walletAddress?: string; address?: string } | undefined)
-      ?.walletAddress ||
-    (session?.user as { walletAddress?: string; address?: string } | undefined)
-      ?.address ||
-    null;
-
-  const deadline = bounty.bountyWindow?.endDate ?? null;
-  const [isPastDeadline, setIsPastDeadline] = useState(false);
-  useEffect(() => {
-    if (!deadline) return;
-    const check = () =>
-      setIsPastDeadline(Date.now() > new Date(deadline).getTime());
-    check();
-    const id = setInterval(check, 10_000);
-    return () => clearInterval(id);
-  }, [deadline]);
-
-  const bountySubmissions = (
-    bounty as { submissions?: Array<{ submittedBy: string }> | null }
-  ).submissions;
-  const serverHasJoined =
-    walletAddress != null &&
-    (bountySubmissions?.some((s) => s.submittedBy === walletAddress) ?? false);
-  const [localJoined, setLocalJoined] = useState(false);
-  const hasJoined = serverHasJoined || localJoined;
-
-  const handleJoin = async () => {
-    if (!walletAddress) {
-      toast.error("Connect your wallet to join.");
-      return;
-    }
-    try {
-      await joinMutation.mutateAsync({
-        bountyId: bounty.id,
-        contributorAddress: walletAddress,
-      });
-      setLocalJoined(true);
-      toast.success("You've joined the competition!");
-    } catch (err) {
-      if (err instanceof ContestError && err.code === "already_joined") {
-        setLocalJoined(true);
-        return;
-      }
-      toast.error(err instanceof Error ? err.message : "Failed to join.");
-    }
-  };
+  const { hasJoined, isPastDeadline, joinMutation, handleJoin } =
+    useCompetitionJoinState(bounty);
 
   const label = () => {
     if (!canAct) {

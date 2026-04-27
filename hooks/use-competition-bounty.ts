@@ -129,6 +129,7 @@ export function useSubmitContestWork() {
     },
     onSettled: (_r, _e, v) => {
       qc.invalidateQueries({ queryKey: bountyKeys.detail(v.bountyId) });
+      qc.invalidateQueries({ queryKey: bountyKeys.lists() });
     },
   });
 }

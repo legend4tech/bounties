@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,11 +12,13 @@ import { BountyDetailSkeleton } from "./bounty-detail-bounty-detail-skeleton";
 import { useBountyDetail } from "@/hooks/use-bounty-detail";
 import { FcfsApprovalPanel } from "@/components/bounty/fcfs-approval-panel";
 import { CompetitionJudging } from "@/components/bounty/competition-judging";
+import type { CompetitionSubmissionEntry } from "@/components/bounty/competition-judging";
 import { EscrowDetailPanel } from "../bounty/escrow-detail-panel";
 import { RefundStatusTracker } from "../bounty/refund-status";
 import { FeeCalculator } from "../bounty/fee-calculator";
 import { useEscrowPool } from "@/hooks/use-escrow";
 import { authClient } from "@/lib/auth-client";
+import { useDeadlinePassed } from "@/hooks/use-deadline-passed";
 import type { CancellationRecord } from "@/types/escrow";
 import { MilestoneFunnel } from "@/components/bounty/milestone-funnel";
 import {
@@ -67,7 +69,6 @@ export function BountyDetailClient({ bountyId }: { bountyId: string }) {
   const { data: session } = authClient.useSession();
   const [cancellationRecord, setCancellationRecord] =
     useState<CancellationRecord | null>(null);
-  const [pastDeadline, setPastDeadline] = useState(false);
 
   const { data: session } = authClient.useSession();
 
@@ -75,15 +76,7 @@ export function BountyDetailClient({ bountyId }: { bountyId: string }) {
     setCancellationRecord(record);
   }, []);
 
-  const endDate = bounty?.bountyWindow?.endDate ?? null;
-  useEffect(() => {
-    if (!endDate) return;
-    const check = () =>
-      setPastDeadline(Date.now() > new Date(endDate).getTime());
-    check();
-    const id = setInterval(check, 10_000);
-    return () => clearInterval(id);
-  }, [endDate]);
+  const pastDeadline = useDeadlinePassed(bounty?.bountyWindow?.endDate);
 
   if (isPending) return <BountyDetailSkeleton />;
 
@@ -146,20 +139,8 @@ export function BountyDetailClient({ bountyId }: { bountyId: string }) {
   // BountyFieldsFragment (list query). The cast is safe here because
   // useBountyDetail returns BountyFieldsFragment & Partial<BountyQuery["bounty"]>.
   const competitionSubmissions =
-    (
-      bounty as {
-        submissions?: Array<{
-          id: string;
-          submittedBy: string;
-          submittedByUser?: {
-            name?: string | null;
-            image?: string | null;
-          } | null;
-          githubPullRequestUrl?: string | null;
-          status: string;
-        }> | null;
-      }
-    ).submissions ?? [];
+    (bounty as { submissions?: CompetitionSubmissionEntry[] | null })
+      .submissions ?? [];
 
   return (
     <div className="flex flex-col lg:flex-row gap-10">

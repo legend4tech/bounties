@@ -8,6 +8,15 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useSubmitContestWork } from "@/hooks/use-competition-bounty";
+import { useDeadlinePassed } from "@/hooks/use-deadline-passed";
+
+// Accepts https:// URLs or ipfs:// / Qm... / bafy... CIDs
+const VALID_SUBMISSION =
+  /^(https?:\/\/.+|ipfs:\/\/.+|Qm[1-9A-HJ-NP-Za-km-z]{44,}|bafy[a-z2-7]{50,})$/;
+
+function isValidSubmission(value: string): boolean {
+  return VALID_SUBMISSION.test(value.trim());
+}
 
 interface CompetitionSubmissionProps {
   bountyId: string;
@@ -34,11 +43,10 @@ export function CompetitionSubmission({
   const { data: session } = authClient.useSession();
   const [workCid, setWorkCid] = useState("");
   const submitMutation = useSubmitContestWork();
+  const isPastDeadline = useDeadlinePassed(deadline);
 
-  // Initialize as null to avoid SSR/client hydration mismatch.
-  // The countdown is set on mount (client-only).
+  // Countdown display — null on server to avoid hydration mismatch
   const [remaining, setRemaining] = useState<number | null>(null);
-
   useEffect(() => {
     if (!deadline) return;
     const tick = () => setRemaining(new Date(deadline).getTime() - Date.now());
@@ -46,9 +54,6 @@ export function CompetitionSubmission({
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [deadline]);
-
-  const isPastDeadline =
-    remaining !== null && remaining <= 0 && deadline != null;
 
   const walletAddress =
     (session?.user as { walletAddress?: string; address?: string } | undefined)
@@ -59,20 +64,25 @@ export function CompetitionSubmission({
 
   if (!hasJoined) return null;
 
+  const trimmed = workCid.trim();
+  const isValid = isValidSubmission(trimmed);
+
   const handleSubmit = async () => {
     if (!walletAddress) {
       toast.error("Connect your wallet to submit.");
       return;
     }
-    if (!workCid.trim()) {
-      toast.error("Please enter your submission link or CID.");
+    if (!isValid) {
+      toast.error(
+        "Enter a valid https:// URL or IPFS CID (ipfs://, Qm…, or bafy…).",
+      );
       return;
     }
     try {
       await submitMutation.mutateAsync({
         bountyId,
         contributorAddress: walletAddress,
-        workCid: workCid.trim(),
+        workCid: trimmed,
       });
       toast.success("Submission recorded on-chain.");
       setWorkCid("");
@@ -120,6 +130,11 @@ export function CompetitionSubmission({
               className="min-h-20 resize-none text-sm"
               disabled={submitMutation.isPending}
             />
+            {trimmed.length > 0 && !isValid && (
+              <p className="text-[11px] text-red-400">
+                Must be a https:// URL or IPFS CID (ipfs://, Qm…, bafy…).
+              </p>
+            )}
           </div>
 
           <p className="text-[11px] text-gray-500">
@@ -130,7 +145,7 @@ export function CompetitionSubmission({
           <Button
             className="w-full"
             onClick={() => void handleSubmit()}
-            disabled={submitMutation.isPending || !workCid.trim()}
+            disabled={submitMutation.isPending || !isValid}
           >
             {submitMutation.isPending ? (
               <Loader2 className="mr-2 size-4 animate-spin" />

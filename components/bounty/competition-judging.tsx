@@ -28,6 +28,8 @@ interface Submission {
   status: string;
 }
 
+export type { Submission as CompetitionSubmissionEntry };
+
 interface CompetitionJudgingProps {
   bountyId: string;
   submissions: Submission[];
