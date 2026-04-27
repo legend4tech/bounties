@@ -70,8 +70,6 @@ export function BountyDetailClient({ bountyId }: { bountyId: string }) {
   const [cancellationRecord, setCancellationRecord] =
     useState<CancellationRecord | null>(null);
 
-  const { data: session } = authClient.useSession();
-
   const handleCancelled = useCallback((record: CancellationRecord) => {
     setCancellationRecord(record);
   }, []);
