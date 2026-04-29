@@ -2,7 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { bountyKeys } from "@/lib/query/query-keys";
-import type { BountyQuery, BountiesQuery } from "@/lib/graphql/generated";
+import type { BountyQuery } from "@/lib/graphql/generated";
 
 // ---------------------------------------------------------------------------
 // Contract client shape (resolved from globalThis.__applicationContracts)
