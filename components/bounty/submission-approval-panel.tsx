@@ -38,8 +38,6 @@ export function SubmissionApprovalPanel({
   submissionDescription,
 }: SubmissionApprovalPanelProps) {
   const [points, setPoints] = useState<number>(5);
-  const [feedback, setFeedback] = useState("");
-  const [isRequestingRevisions, setIsRequestingRevisions] = useState(false);
 
   const { mutate: approveSubmission, isPending: isApproving } =
     useApproveApplicationSubmission();
