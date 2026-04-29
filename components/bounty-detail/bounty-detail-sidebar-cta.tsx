@@ -35,6 +35,11 @@ import { useCompetitionJoinState } from "@/hooks/use-competition-join-state";
 import type { CancellationRecord } from "@/types/escrow";
 import { useCancelBountyDialog } from "@/hooks/use-cancel-bounty-dialog";
 import type { Bounty } from "@/types/bounty";
+import {
+  ApplicationDialog,
+  type ApplicationFormValues,
+} from "@/components/bounty/application-dialog";
+import { useApplyToBounty } from "@/hooks/use-bounty-application";
 
 /** Props accept the wider intersection returned by useBountyDetail so
  * callers don't need a cast. Optional Bounty fields (maxSlots, etc.)
@@ -85,6 +90,17 @@ export function SidebarCTA({ bounty, onCancelled }: SidebarCTAProps) {
     } catch {
       // clipboard write failed
     }
+  };
+
+  const { mutateAsync: applyToBounty } = useApplyToBounty();
+
+  const handleApply = async (values: ApplicationFormValues) => {
+    if (!walletAddress) return;
+    await applyToBounty({
+      bountyId: bounty.id,
+      applicantAddress: walletAddress,
+      proposal: JSON.stringify(values),
+    });
   };
 
   const ctaLabel = () => {
@@ -203,6 +219,20 @@ export function SidebarCTA({ bounty, onCancelled }: SidebarCTAProps) {
               {canAct && !isPastDeadline ? "Join Competition" : ctaLabel()}
             </Button>
           )
+        ) : bounty.type === "MILESTONE_BASED" && canAct ? (
+          <ApplicationDialog
+            bountyTitle={bounty.title}
+            onApply={handleApply}
+            trigger={
+              <Button
+                className="w-full h-11 font-bold tracking-wide"
+                size="lg"
+                disabled={!walletAddress}
+              >
+                Apply for Bounty
+              </Button>
+            }
+          />
         ) : (
           <Button
             className="w-full h-11 font-bold tracking-wide"
@@ -393,6 +423,17 @@ export function MobileCTA({ bounty, onCancelled }: MobileCTAProps) {
   const { walletAddress, hasJoined, isPastDeadline, joinMutation, handleJoin } =
     useCompetitionJoinState(bounty);
 
+  const { mutateAsync: applyToBounty } = useApplyToBounty();
+
+  const handleApply = async (values: ApplicationFormValues) => {
+    if (!walletAddress) return;
+    await applyToBounty({
+      bountyId: bounty.id,
+      applicantAddress: walletAddress,
+      proposal: JSON.stringify(values),
+    });
+  };
+
   const label = () => {
     if (!canAct) {
       switch (bounty.status) {
@@ -436,6 +477,32 @@ export function MobileCTA({ bounty, onCancelled }: MobileCTAProps) {
               ? "Join Competition"
               : label()}
         </Button>
+      ) : bounty.type === "MILESTONE_BASED" && canAct ? (
+        <div className="flex gap-2">
+          <ApplicationDialog
+            bountyTitle={bounty.title}
+            onApply={handleApply}
+            trigger={
+              <Button
+                className="flex-1 h-11 font-bold tracking-wide"
+                size="lg"
+                disabled={!walletAddress}
+              >
+                Apply for Bounty
+              </Button>
+            }
+          />
+          {canCancel && (
+            <Button
+              variant="outline"
+              size="lg"
+              className="h-11 border-red-500/30 text-red-400 hover:bg-red-500/10 shrink-0"
+              onClick={() => setCancelDialogOpen(true)}
+            >
+              <XCircle className="size-4" />
+            </Button>
+          )}
+        </div>
       ) : (
         <div className="flex gap-2">
           <Button

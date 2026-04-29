@@ -29,6 +29,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MilestoneSubmissionCard } from "./milestone-submission-card";
 import { Model4MaintainerDashboard } from "./model4-maintainer-dashboard";
 import type { Milestone, ContributorProgress } from "@/types/bounty";
+import {
+  ApplicationReviewDashboard,
+  type Application,
+} from "@/components/bounty/application-review-dashboard";
+import { SubmissionApprovalPanel } from "@/components/bounty/submission-approval-panel";
+import { ApplicationSubmitWorkPanel } from "@/components/bounty/application-submit-work-panel";
 
 type BountyData = ReturnType<typeof useBountyDetail>["data"];
 
@@ -61,6 +67,46 @@ function getFullMilestoneData(bounty: BountyData): {
       bounty?.contributorProgress ?? MOCK_MODEL4_CONTRIBUTORS,
   };
 }
+
+// Mock applications for UI demonstration
+const MOCK_APPLICATIONS: Application[] = [
+  {
+    id: "app-1",
+    applicantAddress: "GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGYWDOUALPIF5JD4PI21JQ",
+    applicantName: "Alice Dev",
+    proposal: {
+      approach:
+        "I will use React Query for caching and Soroban for the smart contracts. I have extensive experience building dashboards.",
+      estimatedTimeline: "2 weeks",
+      relevantExperience:
+        "Built 3 similar dashboards in the Stellar ecosystem.",
+      portfolioUrl: "https://github.com/alicedev",
+    },
+    reputation: {
+      score: 85,
+      tier: "Expert",
+      completionStats: "95% Success",
+    },
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "app-2",
+    applicantAddress: "GBX...ABCD",
+    applicantName: "Bob Builder",
+    proposal: {
+      approach:
+        "Simple and robust implementation following the Model 2 specs strictly.",
+      estimatedTimeline: "1 week",
+      relevantExperience: "Core contributor to a major frontend library.",
+    },
+    reputation: {
+      score: 42,
+      tier: "Intermediate",
+      completionStats: "100% Success",
+    },
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+  },
+];
 
 export function BountyDetailClient({ bountyId }: { bountyId: string }) {
   const router = useRouter();
@@ -133,6 +179,11 @@ export function BountyDetailClient({ bountyId }: { bountyId: string }) {
   const isCreator =
     (session?.user as { id?: string } | undefined)?.id === bounty.createdBy;
   const isFinalized = bounty.status === "COMPLETED";
+  const walletAddress =
+    (session?.user as { walletAddress?: string; id?: string })?.walletAddress ||
+    session?.user?.id ||
+    "";
+
   // submissions is present on BountyQuery (single-bounty query) but not on
   // BountyFieldsFragment (list query). The cast is safe here because
   // useBountyDetail returns BountyFieldsFragment & Partial<BountyQuery["bounty"]>.
@@ -200,9 +251,41 @@ export function BountyDetailClient({ bountyId }: { bountyId: string }) {
 
         {!isCancelled && pool && <EscrowDetailPanel poolId={bountyId} />}
         <RefundStatusTracker bountyId={bountyId} isCancelled={isCancelled} />
-        {bounty.type !== "FIXED_PRICE" && !isCompetition && (
-          <BountyDetailSubmissionsCard bounty={bounty} />
-        )}
+
+        {/* Model 2 Application Flow integration */}
+        {bounty.type === "MILESTONE_BASED" &&
+          isCreator &&
+          bounty.status === "OPEN" && (
+            <ApplicationReviewDashboard
+              bountyId={bountyId}
+              creatorAddress={walletAddress}
+              applications={MOCK_APPLICATIONS}
+            />
+          )}
+
+        {bounty.type === "MILESTONE_BASED" &&
+          !isCreator &&
+          bounty.status === "IN_PROGRESS" && (
+            <ApplicationSubmitWorkPanel
+              bountyId={bountyId}
+              contributorAddress={walletAddress}
+            />
+          )}
+
+        {bounty.type === "MILESTONE_BASED" &&
+          isCreator &&
+          bounty.status === "UNDER_REVIEW" && (
+            <SubmissionApprovalPanel
+              bounty={bounty}
+              creatorAddress={walletAddress}
+              submittedWorkCid="QmHash123MockedWorkCid"
+              submissionDescription="I have completed the feature as requested. Please check the IPFS link."
+            />
+          )}
+
+        {bounty.type !== "FIXED_PRICE" &&
+          bounty.type !== "MILESTONE_BASED" &&
+          !isCompetition && <BountyDetailSubmissionsCard bounty={bounty} />}
         {bounty.type === "FIXED_PRICE" && <FcfsApprovalPanel bounty={bounty} />}
         {isCompetition && isCreator && (pastDeadline || isFinalized) && (
           <CompetitionJudging
