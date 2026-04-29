@@ -4,7 +4,6 @@ import { useState } from "react";
 import {
   CheckCircle,
   AlertTriangle,
-  MessageSquare,
   ExternalLink,
   ShieldCheck,
 } from "lucide-react";
@@ -16,7 +15,6 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -47,19 +45,12 @@ export function SubmissionApprovalPanel({
     useApproveApplicationSubmission();
 
   const handleApprove = () => {
+    const clampedPoints = Math.max(1, Math.min(100, points || 0));
     approveSubmission({
       bountyId: bounty.id,
       creatorAddress,
-      points,
+      points: clampedPoints,
     });
-  };
-
-  const handleRequestRevisions = () => {
-    // In a full implementation, this would trigger a different mutation
-    // that sets the status to "REVISION_REQUESTED" and records the feedback
-    console.log("Requesting revisions with feedback:", feedback);
-    setIsRequestingRevisions(false);
-    setFeedback("");
   };
 
   return (
@@ -113,17 +104,22 @@ export function SubmissionApprovalPanel({
               <p className="text-xs text-gray-500 mt-1 mb-2">
                 Reward the contributor with points that boost their tier.
               </p>
-              <div className="flex items-center gap-3">
-                <Input
-                  id="reputation-points"
-                  type="number"
-                  min="1"
-                  max="100"
-                  value={points}
-                  onChange={(e) => setPoints(parseInt(e.target.value) || 0)}
-                  className="w-24 border-gray-700 bg-gray-900/50"
-                />
-                <span className="text-sm text-gray-400">Points</span>
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-3">
+                  <Input
+                    id="reputation-points"
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={points}
+                    onChange={(e) => setPoints(parseInt(e.target.value) || 0)}
+                    className="w-24 border-gray-700 bg-gray-900/50"
+                  />
+                  <span className="text-sm text-gray-400">Points</span>
+                </div>
+                <span className="text-[10px] text-gray-500 italic">
+                  Tip: 5 = Average, 20+ = Exceptional
+                </span>
               </div>
             </div>
 
@@ -137,65 +133,25 @@ export function SubmissionApprovalPanel({
             </Button>
           </div>
 
-          {/* Revision Section */}
+          {/* Revision Section - Coming Soon */}
           <div className="space-y-4 border-l border-gray-800/50 pl-6">
-            {!isRequestingRevisions ? (
-              <div className="h-full flex flex-col justify-center items-center text-center p-4 border border-dashed border-gray-800 rounded-lg">
-                <AlertTriangle className="size-6 text-yellow-500 mb-2" />
-                <h4 className="text-sm font-medium text-gray-300 mb-1">
-                  Needs Changes?
-                </h4>
-                <p className="text-xs text-gray-500 mb-4">
-                  Request revisions before releasing the escrow.
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10"
-                  onClick={() => setIsRequestingRevisions(true)}
-                >
-                  Request Revisions
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-3 animate-in fade-in zoom-in-95 duration-200">
-                <Label
-                  htmlFor="revision-feedback"
-                  className="text-sm font-medium text-gray-300"
-                >
-                  Revision Feedback
-                </Label>
-                <Textarea
-                  id="revision-feedback"
-                  placeholder="Explain what needs to be changed..."
-                  value={feedback}
-                  onChange={(e) => setFeedback(e.target.value)}
-                  className="min-h-[100px] border-gray-700 bg-gray-900/50 resize-none text-sm"
-                />
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => {
-                      setIsRequestingRevisions(false);
-                      setFeedback("");
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-yellow-950"
-                    disabled={!feedback.trim()}
-                    onClick={handleRequestRevisions}
-                  >
-                    <MessageSquare className="size-3.5 mr-2" />
-                    Send Request
-                  </Button>
-                </div>
-              </div>
-            )}
+            <div className="h-full flex flex-col justify-center items-center text-center p-4 border border-dashed border-gray-800 rounded-lg opacity-60">
+              <AlertTriangle className="size-6 text-gray-500 mb-2" />
+              <h4 className="text-sm font-medium text-gray-400 mb-1">
+                Needs Changes?
+              </h4>
+              <p className="text-xs text-gray-500 mb-4">
+                Request revisions before releasing the escrow.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-gray-700 text-gray-500 cursor-not-allowed"
+                disabled
+              >
+                Coming Soon
+              </Button>
+            </div>
           </div>
         </div>
       </CardContent>

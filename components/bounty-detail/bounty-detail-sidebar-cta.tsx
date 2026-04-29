@@ -219,7 +219,7 @@ export function SidebarCTA({ bounty, onCancelled }: SidebarCTAProps) {
               {canAct && !isPastDeadline ? "Join Competition" : ctaLabel()}
             </Button>
           )
-        ) : bounty.type === "MILESTONE_BASED" && canAct ? (
+        ) : bounty.type === "MILESTONE_BASED" && canAct && !isCreator ? (
           <ApplicationDialog
             bountyTitle={bounty.title}
             onApply={handleApply}
@@ -477,7 +477,7 @@ export function MobileCTA({ bounty, onCancelled }: MobileCTAProps) {
               ? "Join Competition"
               : label()}
         </Button>
-      ) : bounty.type === "MILESTONE_BASED" && canAct ? (
+      ) : bounty.type === "MILESTONE_BASED" && canAct && !isCreator ? (
         <div className="flex gap-2">
           <ApplicationDialog
             bountyTitle={bounty.title}

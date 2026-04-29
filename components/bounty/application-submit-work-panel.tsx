@@ -12,7 +12,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { useSubmitApplicationWork } from "@/hooks/use-bounty-application";
 
 interface ApplicationSubmitWorkPanelProps {
@@ -25,7 +24,6 @@ export function ApplicationSubmitWorkPanel({
   contributorAddress,
 }: ApplicationSubmitWorkPanelProps) {
   const [workCid, setWorkCid] = useState("");
-  const [description, setDescription] = useState("");
 
   const { mutate: submitWork, isPending } = useSubmitApplicationWork();
 
@@ -74,19 +72,6 @@ export function ApplicationSubmitWorkPanel({
               Please provide the IPFS Content Identifier (CID) for your
               deliverable bundle.
             </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="work-description">
-              Notes for the Creator (Optional)
-            </Label>
-            <Textarea
-              id="work-description"
-              placeholder="Briefly describe what is included in this deliverable..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="min-h-[100px] bg-background-card"
-            />
           </div>
 
           <Button

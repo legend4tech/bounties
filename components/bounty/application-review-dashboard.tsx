@@ -4,7 +4,6 @@ import { useState } from "react";
 import {
   Users,
   CheckCircle,
-  XCircle,
   Clock,
   Star,
   Trophy,
@@ -116,13 +115,6 @@ export function ApplicationReviewDashboard({
             )}
             <Button
               size="sm"
-              variant="outline"
-              className="border-red-500/30 text-red-400 hover:bg-red-500/10"
-            >
-              <XCircle className="size-4 mr-1" /> Decline
-            </Button>
-            <Button
-              size="sm"
               onClick={() => handleSelectApplicant(app.applicantAddress)}
               disabled={isSelecting}
             >
@@ -144,16 +136,18 @@ export function ApplicationReviewDashboard({
             <p className="text-gray-400 line-clamp-2 leading-relaxed">
               {app.proposal.relevantExperience}
             </p>
-            {app.proposal.portfolioUrl && (
-              <a
-                href={app.proposal.portfolioUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 text-primary hover:underline mt-2"
-              >
-                View Portfolio <ArrowRight className="size-3" />
-              </a>
-            )}
+            {app.proposal.portfolioUrl &&
+              (app.proposal.portfolioUrl.startsWith("http://") ||
+                app.proposal.portfolioUrl.startsWith("https://")) && (
+                <a
+                  href={app.proposal.portfolioUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-primary hover:underline mt-2"
+                >
+                  View Portfolio <ArrowRight className="size-3" />
+                </a>
+              )}
           </div>
         )}
       </CardContent>

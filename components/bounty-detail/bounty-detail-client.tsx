@@ -68,45 +68,14 @@ function getFullMilestoneData(bounty: BountyData): {
   };
 }
 
-// Mock applications for UI demonstration
-const MOCK_APPLICATIONS: Application[] = [
-  {
-    id: "app-1",
-    applicantAddress: "GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGYWDOUALPIF5JD4PI21JQ",
-    applicantName: "Alice Dev",
-    proposal: {
-      approach:
-        "I will use React Query for caching and Soroban for the smart contracts. I have extensive experience building dashboards.",
-      estimatedTimeline: "2 weeks",
-      relevantExperience:
-        "Built 3 similar dashboards in the Stellar ecosystem.",
-      portfolioUrl: "https://github.com/alicedev",
-    },
-    reputation: {
-      score: 85,
-      tier: "Expert",
-      completionStats: "95% Success",
-    },
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "app-2",
-    applicantAddress: "GBX...ABCD",
-    applicantName: "Bob Builder",
-    proposal: {
-      approach:
-        "Simple and robust implementation following the Model 2 specs strictly.",
-      estimatedTimeline: "1 week",
-      relevantExperience: "Core contributor to a major frontend library.",
-    },
-    reputation: {
-      score: 42,
-      tier: "Intermediate",
-      completionStats: "100% Success",
-    },
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-  },
-];
+// Backend does not currently provide applications in the response.
+// Fall back to empty array until the schema supports it.
+const getApplications = (bounty: BountyData): Application[] => {
+  return (
+    (bounty as BountyData & { applications?: Application[] })?.applications ??
+    []
+  );
+};
 
 export function BountyDetailClient({ bountyId }: { bountyId: string }) {
   const router = useRouter();
@@ -179,10 +148,17 @@ export function BountyDetailClient({ bountyId }: { bountyId: string }) {
   const isCreator =
     (session?.user as { id?: string } | undefined)?.id === bounty.createdBy;
   const isFinalized = bounty.status === "COMPLETED";
+  // walletAddress is required for contract actions. Do NOT fallback to user.id.
   const walletAddress =
-    (session?.user as { walletAddress?: string; id?: string })?.walletAddress ||
-    session?.user?.id ||
-    "";
+    (session?.user as { walletAddress?: string })?.walletAddress || "";
+
+  // Identify if the current user is the assigned contributor
+  // using a fallback check on submissions or assumed backend field.
+  const isAssignedApplicant =
+    (bounty as BountyData & { assignedContributorId?: string })
+      ?.assignedContributorId === session?.user?.id ||
+    bounty.submissions?.some((s) => s.submittedBy === session?.user?.id) ||
+    (!isCreator && bounty.status === "IN_PROGRESS");
 
   // submissions is present on BountyQuery (single-bounty query) but not on
   // BountyFieldsFragment (list query). The cast is safe here because
@@ -259,12 +235,13 @@ export function BountyDetailClient({ bountyId }: { bountyId: string }) {
             <ApplicationReviewDashboard
               bountyId={bountyId}
               creatorAddress={walletAddress}
-              applications={MOCK_APPLICATIONS}
+              applications={getApplications(bounty)}
             />
           )}
 
         {bounty.type === "MILESTONE_BASED" &&
-          !isCreator &&
+          isAssignedApplicant &&
+          walletAddress &&
           bounty.status === "IN_PROGRESS" && (
             <ApplicationSubmitWorkPanel
               bountyId={bountyId}
@@ -278,8 +255,9 @@ export function BountyDetailClient({ bountyId }: { bountyId: string }) {
             <SubmissionApprovalPanel
               bounty={bounty}
               creatorAddress={walletAddress}
-              submittedWorkCid="QmHash123MockedWorkCid"
-              submissionDescription="I have completed the feature as requested. Please check the IPFS link."
+              submittedWorkCid={
+                bounty.submissions?.[0]?.githubPullRequestUrl || undefined
+              }
             />
           )}
 

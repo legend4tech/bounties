@@ -35,8 +35,10 @@ const applicationFormSchema = z.object({
     .trim()
     .refine(
       (value) =>
-        value.length === 0 || z.string().url().safeParse(value).success,
-      "Please enter a valid URL",
+        value.length === 0 ||
+        (z.string().url().safeParse(value).success &&
+          (value.startsWith("http://") || value.startsWith("https://"))),
+      "Please enter a valid HTTP or HTTPS URL",
     ),
 });
 

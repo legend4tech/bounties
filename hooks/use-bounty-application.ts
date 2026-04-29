@@ -183,7 +183,7 @@ export function useSubmitApplicationWork() {
           ...prev,
           bounty: {
             ...prev.bounty,
-            status: "IN_REVIEW",
+            status: "UNDER_REVIEW",
             updatedAt: new Date().toISOString(),
           },
         });
